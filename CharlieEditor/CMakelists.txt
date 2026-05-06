@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 4.0)
+set(CMAKE_CXX_STANDARD 20)
+file(GLOB_RECURSE SourceFiles
+	"./*.cpp"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/imgui/*.cpp"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/imguizmo/*.cpp"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/imgui/misc/freetype/*.cpp"
+	"./*.h"
+)	
+add_library(CharlieEditor STATIC ${SourceFiles})
+target_include_directories(CharlieEditor PUBLIC
+    "${PROJECT_SOURCE_DIR}/Library/include"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/imgui"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/imguizmo"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/imgui/misc/freetype"
+    "${PROJECT_SOURCE_DIR}/Library/vendor"
+    "${PROJECT_SOURCE_DIR}/Renderer/GfxCore"
+    "${PROJECT_SOURCE_DIR}/Renderer/GfxBase"
+    "${PROJECT_SOURCE_DIR}/Renderer/GfxRenderer"
+    "${PROJECT_SOURCE_DIR}/CharlieEngine"
+    "${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore"
+    "${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore/Components"
+
+)
+target_link_libraries(
+	CharlieEditor PUBLIC
+    CharlieEngine
+    Renderer
+	"${PROJECT_SOURCE_DIR}/Library/lib/glfw3.lib"
+	"opengl32.lib"
+)
