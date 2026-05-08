@@ -15,9 +15,12 @@ namespace Cle::Core
 		GLFWwindow* window;
 		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
 		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices) = 0;
+		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices, entt::entity Parent) = 0;
 		virtual void Run() = 0;
+		virtual void DestroyObject(entt::entity existing) = 0;
 		virtual void Render() = 0;
 		virtual void Update(float dt) = 0;
+		virtual entt::entity CopyObject(entt::entity existing) = 0;
 	private:
 		//std::unique_ptr<IWindow> window;
 		bool running = true;

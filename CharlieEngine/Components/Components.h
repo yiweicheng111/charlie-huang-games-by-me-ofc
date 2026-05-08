@@ -4,12 +4,18 @@
 #include <functional>
 #include "GfxBase.h"
 #include "Camera.h"
+#include <entt/entt.hpp>
+#include "Transform.h"
 namespace Cle::Components
 {
 	struct Name
 	{
 		std::string value{};
 		Name(std::string value) : value(value) {}
+	};
+	struct TreeInfo {
+		entt::entity parent = entt::null;
+		std::vector<entt::entity> Children;
 	};
 	struct Ray 
 	{
@@ -24,6 +30,16 @@ namespace Cle::Components
 		glm::vec3 max{};
 		glm::vec3 min{};
 		AABB() = default;
+		
+		AABB (std::vector<Cle::Gfx::Vertex>& vertices, glm::mat4 model) {
+			min = glm::vec3(std::numeric_limits<float>::max());
+			max = glm::vec3(std::numeric_limits<float>::min());
+			for (auto& verts : vertices) {
+				glm::vec3 world = glm::vec3(model * glm::vec4(verts.Position, 1.0f));
+				min = glm::min(min, world);
+				max = glm::max(min, world);
+			}
+		}
 		AABB(std::vector<Cle::Gfx::Vertex>& vertices) {
 			min = glm::vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			max = glm::vec3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());

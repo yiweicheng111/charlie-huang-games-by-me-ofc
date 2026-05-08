@@ -2,6 +2,18 @@
 #include "OpenGL4/OpenGLRenderer.h"
 using namespace Cle::Gfx;
 using namespace Cle::Components;
+static void updateAABBS(entt::registry& registry) {
+	for (auto ent : registry.view<GenericMesh>()) {
+		if (registry.any_of<Transform>(ent)) {
+			Transform& t = registry.get<Transform>(ent);
+			GenericMesh m = registry.get<GenericMesh>(ent);
+			if (t.AABBdirty) {
+				registry.get<GenericMesh>(ent).m_AABB = AABB(m.Vertices, t.model);
+				t.AABBdirty = false;
+			}
+		}
+	}
+}
 Cle::Editor::EditorApplication::EditorApplication()
 {
 	renderer = Renderer::IRenderer::Create();
@@ -16,8 +28,8 @@ Cle::Editor::EditorApplication::EditorApplication()
 	renderer->setSettings();
 	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	m_camera = Camera(glm::radians(70.0f), 1);
-	m_Controller = Cle::Editor::FreeCameraControls(&m_camera,window);
-	m_UIHandler = Cle::Editor::EditorUI(&registry, window,&m_camera);
+	m_Controller = Cle::Editor::FreeCameraControls(&m_camera, window);
+	m_UIHandler = Cle::Editor::EditorUI(&registry, window, &m_camera);
 }
 
 entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices)
@@ -25,15 +37,78 @@ entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::
 	entt::entity charlie = registry.create();
 	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
 	registry.emplace<Cle::Components::Transform>(charlie);
-	registry.emplace<Cle::Gfx::Material>(charlie,renderer->getMaterial());
+	registry.emplace<Cle::Gfx::Material>(charlie, renderer->getMaterial());
 	registry.emplace<Cle::Components::Name>(charlie, "charlie");
+	registry.emplace<TreeInfo>(charlie);
 
 	return charlie;
 }
 
+entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices, entt::entity Parent)
+{
+	entt::entity charlie = registry.create();
+	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
+	registry.emplace<Cle::Components::Transform>(charlie);
+	registry.emplace<Cle::Gfx::Material>(charlie, renderer->getMaterial());
+	registry.emplace<Cle::Components::Name>(charlie, "charlie");
+	registry.emplace<TreeInfo>(charlie);
+	registry.get<TreeInfo>(charlie).parent = Parent;
+	registry.get<TreeInfo>(Parent).Children.push_back(charlie);
+
+	return charlie;
+	
+}
+
+entt::entity Cle::Editor::EditorApplication::CopyObject(entt::entity existing)
+{
+	entt::entity newent = registry.create();
+	if (registry.all_of<Transform>(existing)) {
+		registry.emplace<Transform>(newent, registry.get<Transform>(existing));
+	}
+	if (registry.all_of<Name>(existing)) {
+		registry.emplace<Name>(newent, registry.get<Name>(existing));
+	}
+	if (registry.all_of<Material>(existing)) {
+		registry.emplace<Material>(newent, registry.get<Material>(existing));
+	}
+	if (registry.all_of<GenericMesh>(existing)) {
+		registry.emplace<GenericMesh>(newent, registry.get<GenericMesh>(existing));
+		renderer->uploadMesh(newent, registry);
+	}
+	if (registry.all_of<TreeInfo>(existing)) {
+		registry.emplace<TreeInfo>(newent, registry.get<TreeInfo>(existing));
+	}
+	return newent;
+}
+
+void Cle::Editor::EditorApplication::DestroyObject(entt::entity existing)
+{
+	m_UIHandler.m_Focused_Entity = entt::null;
+
+	if (!registry.valid(existing)) return;
+
+	if (registry.any_of<TreeInfo>(registry.get<TreeInfo>(existing).parent)) {
+		std::vector<entt::entity>& pChildren = registry.get<TreeInfo>(registry.get<TreeInfo>(existing).parent).Children;
+		pChildren.erase(std::remove(pChildren.begin(), pChildren.end(), existing), pChildren.end());
+	}
+	registry.destroy(existing);
+}
+
+void Cle::Editor::EditorApplication::runHotKey()
+{
+	if (m_UIHandler.m_Focused_Entity == entt::null) return;
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS){
+		CopyObject(m_UIHandler.m_Focused_Entity);
+	}
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+		DestroyObject(m_UIHandler.m_Focused_Entity);
+	}
+}
+
 void Cle::Editor::EditorApplication::runPointer()
 {
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS && !ImGuizmo::IsUsing()) {
+		m_UIHandler.m_Focused_Entity = entt::null;
 		int winWidth, winHeight;
 		double pX, pY;
 		glfwGetCursorPos(window, &pX, &pY);
@@ -86,5 +161,7 @@ void Cle::Editor::EditorApplication::Render()
 void Cle::Editor::EditorApplication::Update(float dt) {
 	m_Controller.Poll();
 	m_UIHandler.Update();
+	updateAABBS(registry);
+	runHotKey();
 	runPointer();
 }

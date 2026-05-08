@@ -18,7 +18,7 @@ int main() {
 	Cle::Editor::EditorApplication app;
 
 	std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
-	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/bleachers.obj");
+	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/alphabet.obj");
 	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 	for (Cle::Gfx::GenericMesh& I : ModelLoaded) {
 		auto e = app.CreateDebugObject(I.Vertices,I.Indices);
@@ -28,8 +28,10 @@ int main() {
 		app.registry.get<Cle::Gfx::Material>(e).Color = glm::vec4(0.7,0.7,0.7,1);
 
 		app.renderer->uploadMesh(e, app.registry);
+		app.CopyObject(e);
 
 	}
+
 	app.renderer->clearColor(0, 0, 0, 1);
 	app.m_camera.Position.z = 4;
 	app.m_camera.lookAt(glm::vec3{ 0, 0, 0 });

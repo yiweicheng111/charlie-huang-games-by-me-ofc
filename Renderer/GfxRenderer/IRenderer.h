@@ -16,6 +16,7 @@ namespace Cle::Renderer
 	{
 	public:
 		Cle::Gfx::GenericMeshHandler m_GenericMeshHandler;
+
 		virtual ~IRenderer() = default;
 		virtual Cle::Gfx::Material getMaterial() = 0;
 		virtual void setSettings() = 0;

@@ -18,6 +18,11 @@ namespace Cle::Editor
 		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
 		EditorApplication();
 		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices) override;
+		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices,entt::entity Parent) override;
+		virtual entt::entity CopyObject(entt::entity existing) override;
+		virtual void DestroyObject(entt::entity existing) override;
+
+		void runHotKey();
 		void runPointer();
 		virtual void Run() override;
 		virtual void Render() override;

@@ -1,4 +1,4 @@
-#include "Components.h"
+﻿#include "Components.h"
 
 bool Cle::Components::AABB::intersects(AABB& other)
 {
@@ -15,14 +15,15 @@ float Cle::Components::AABB::intersects(Ray& ray)
 
     float y1 = (min.y - ray.origin.y) / ray.dir.y;
     float y2 = (max.y - ray.origin.y) / ray.dir.y;
-    tmin = std::min(y1, y2);
-    tmax = std::max(y1, y2);
+    tmin = std::max(tmin, std::min(y1,y2));
+    tmax = std::min(tmax, std::max(y1, y2));
 
     float z1 = (min.z - ray.origin.z) / ray.dir.z;
     float z2 = (max.z - ray.origin.z) / ray.dir.z;
-    tmin = std::min(z1, z2);
-    tmax = std::max(z1, z2);
-    return tmax >= std::min(0.0f, tmin) ? tmax : -1;
+    tmin = std::max(tmin, std::min(z1,z2));
+    tmax = std::min(tmax, std::max(z1, z2));
+
+    return tmax >= std::max(0.0f, tmin) ? tmax : -1;
 }
 
 void Cle::Components::Ray::SetFromPointer(double mx, double my, int screenWidth, int screenHeight, Cle::Gfx::Camera& camera)
@@ -30,7 +31,7 @@ void Cle::Components::Ray::SetFromPointer(double mx, double my, int screenWidth,
     float x = (2 * mx) / screenWidth - 1;
     float y = 1 - (2 * my) / screenHeight;
     glm::mat4 inverse = glm::inverse(camera.getProjection() * camera.getViewMatrix());
-    glm::vec4 clip = glm::vec4(mx, my, -1.0f, 1.0f);
+    glm::vec4 clip = glm::vec4(x, y, -1.0f, 1.0f);
     glm::vec4 world = inverse * clip;
     if (world.w != 0) {
         world.x /= world.w;

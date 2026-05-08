@@ -12,12 +12,15 @@ namespace Cle::Gfx
 	};
 	struct GenericMesh {
 		GenericMesh() {};
+		GenericMesh(const GenericMesh& other) = default;
+		Cle::Components::AABB m_local_AABB;
 		Cle::Components::AABB m_AABB;
 		std::vector<Cle::Gfx::Vertex> Vertices;
 		std::vector<unsigned int> Indices;
 		GenericMesh(std::vector<Cle::Gfx::Vertex>& _Vertices) : Vertices(_Vertices) {}
 		GenericMesh(std::vector<Cle::Gfx::Vertex>& _Vertices, std::vector<unsigned int>& _Indices) : Vertices(_Vertices), Indices(_Indices) {
 			m_AABB=Cle::Components::AABB(_Vertices);
+			m_local_AABB = Cle::Components::AABB(_Vertices);
 		}
 	};
 	struct GenericMeshHandler {

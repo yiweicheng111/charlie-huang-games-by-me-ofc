@@ -1,4 +1,7 @@
 #include "EditorUI.h"
+#include "Mesh.h"
+using namespace Cle::Components;
+
 namespace Cle::Editor
 {
 	EditorUI::EditorUI(entt::registry* registry,GLFWwindow* m_window, Cle::Gfx::Camera* m_camera) :m_camera(m_camera), m_window(m_window), m_registry(registry)
@@ -38,8 +41,12 @@ namespace Cle::Editor
 	}
 	void EditorUI::DrawGizmo(entt::entity entity)
 	{
+	
 		Cle::Components::Transform* transform = m_registry->try_get<Cle::Components::Transform>(entity);
 		if (!transform) return;
+		if (!m_registry->any_of<Cle::Gfx::GenericMesh>(entity)) return;
+		Cle::Components::AABB aabb = m_registry->get<Cle::Gfx::GenericMesh>(entity).m_AABB;
+		glm::vec3 center = 0.5f * (aabb.min + aabb.max);
 		ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());
 		int width, height;
 		glfwGetWindowSize(m_window, &width, &height);
@@ -49,17 +56,21 @@ namespace Cle::Editor
 			height
 		);
 		
-		glm::mat4* model = &transform->model; 
+		glm::mat4 modelCopy = transform->model;
 		ImGuizmo::Manipulate(
 			glm::value_ptr(m_camera->getViewMatrix()),
 			glm::value_ptr(m_camera->getProjection()),
 			ImGuizmo::TRANSLATE,
 			ImGuizmo::LOCAL,
-			glm::value_ptr(*model)
+			glm::value_ptr(modelCopy)
 		);
-		glm::vec3 nscale, npos, nrot;
-		ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(*model), glm::value_ptr(npos), glm::value_ptr(nrot), glm::value_ptr(nscale));
-		transform->scale = nscale;  transform->orientation = nrot; transform->position = npos;
+		if (ImGuizmo::IsUsing()) {
+			glm::vec3 nscale, npos, nrot;
+			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelCopy), glm::value_ptr(npos), glm::value_ptr(nrot), glm::value_ptr(nscale));
+			transform->setScale(nscale);  transform->setOrientation(nrot); transform->setPosition(npos);
+			transform->AABBdirty = true;
+		}
+	
 	}
 	void EditorUI::Update()
 	{
@@ -73,8 +84,8 @@ namespace Cle::Editor
 			DrawGizmo(m_Focused_Entity);
 		}
 		ImGui::GetIO().WantCaptureMouse = ImGuizmo::IsOver() ? false : ImGui::GetIO().WantCaptureMouse;
-
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
+	
 }

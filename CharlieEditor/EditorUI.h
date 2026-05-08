@@ -20,6 +20,7 @@ namespace Cle::Editor
 		Cle::Gfx::Pipeline m_Pipeline = Cle::Gfx::G_PIPE_LINE;
 		entt::registry* m_registry = nullptr;
 		ImGuiIO* io;
+		bool pointerBusy = false;
 		entt::entity m_Focused_Entity = entt::null;
 		GLFWwindow* m_window;
 		Cle::Gfx::Camera* m_camera;
