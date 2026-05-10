@@ -5,9 +5,9 @@
 using namespace Cle::Gfx;
 std::vector<GenericMesh> GenericMeshHandler::ProcessNode(aiNode* node, const aiScene* scene)
 {
-	std::cout << "processed\n";
 
 	std::vector<GenericMesh> meshes;
+	meshes.reserve(node->mNumMeshes);
 	for (unsigned int i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -24,7 +24,9 @@ std::vector<GenericMesh> GenericMeshHandler::ProcessNode(aiNode* node, const aiS
 GenericMesh GenericMeshHandler::ProcessMesh(aiMesh* Mesh, const aiScene* scene)
 {
 	std::vector<Vertex> vertices;
+	vertices.reserve(Mesh->mNumVertices);
 	std::vector<unsigned int> indices;
+	indices.reserve(Mesh->mNumFaces*3);
 	for (unsigned int i = 0; i < Mesh->mNumVertices; i++) {
 		Vertex v{};
 		v.Position = glm::vec3(Mesh->mVertices[i].x, Mesh->mVertices[i].y, Mesh->mVertices[i].z);
@@ -44,7 +46,23 @@ GenericMesh GenericMeshHandler::ProcessMesh(aiMesh* Mesh, const aiScene* scene)
 			indices.push_back(face.mIndices[j]);
 		}
 	}
-	return Cle::Gfx::GenericMesh(vertices, indices);
+	Cle::Gfx::GenericMesh loadedMesh(vertices, indices);
+	if (Mesh->mMaterialIndex >= 0)
+	{
+		aiMaterial* material = scene->mMaterials[Mesh->mMaterialIndex];
+		aiString path;
+		aiColor3D color(1.0f, 1.0f, 1.0f);
+		material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+		loadedMesh.assimpRequestedColor = glm::vec3(color.r, color.g, color.b);
+
+		if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path))
+		{
+			loadedMesh.assimpRequestedTexturePath = path.C_Str();
+			std::cout << path.C_Str() << std::endl;
+		}
+
+	}
+	return loadedMesh;
 }
 std::vector<GenericMesh> GenericMeshHandler::LoadModel(const char* path)
 {

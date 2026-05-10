@@ -25,7 +25,7 @@ namespace Cle::Renderer
 		virtual void clearColor(float r, float g, float b, float w) = 0;
 		virtual void drawMesh(entt::entity e, entt::registry& registry) = 0;
 		virtual void uploadMesh(entt::entity e, entt::registry& registry) = 0;
-
+		//virtual void SyncMeshes(entt::registry& registry) = 0;
 		virtual void UniformCamMatrix(Cle::Gfx::Camera& camera, Cle::Gfx::Material& material) = 0;
 
 		static std::shared_ptr<IRenderer> Create();

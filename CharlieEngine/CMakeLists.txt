@@ -3,17 +3,16 @@
 set(CMAKE_CXX_STANDARD 20)
 
 file(GLOB_RECURSE EngineFiles 
-    "Scripting/*.cpp" 
-    "Scripting/*.h"
-    "Editor/*.cpp" 
-    "Editor/*.h"
-    "Components/*.cpp" 
-    "Components/*.h"
-    "CharlieCore/*.cpp" 
-    "CharlieCore/*.h"
-    "CharlieCore/audio/*.cpp" 
-    "CharlieCore/audio/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Scripting/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Scripting/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Editor/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Editor/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Components/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Components/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/*.h"
     "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
+    "${PROJECT_SOURCE_DIR}/Library/vendor/miniaudio/*.c"
 )
 
 add_library(CharlieEngine STATIC ${EngineFiles})

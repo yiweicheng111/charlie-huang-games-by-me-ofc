@@ -9,18 +9,19 @@ namespace Cle::Editor
 	{
 	public:
 		Cle::Scripting::ScriptHandler m_ScriptHandler;
-		Cle::Gfx::Camera m_camera;
 		Cle::Editor::FreeCameraControls m_Controller;
-		entt::registry registry;
 		Cle::Editor::EditorUI m_UIHandler;
-		GLFWwindow* window;
-		
+
 		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
+		~EditorApplication();
 		EditorApplication();
-		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices) override;
-		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices,entt::entity Parent) override;
+		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices) override;
+		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices,entt::entity Parent) override;
 		virtual entt::entity CopyObject(entt::entity existing) override;
 		virtual void DestroyObject(entt::entity existing) override;
+		virtual void AudioPass() override;
+		void updateAABBS();
+		virtual void updateBoundingSpheres() override;
 
 		void runHotKey();
 		void runPointer();

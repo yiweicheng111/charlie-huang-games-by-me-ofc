@@ -7,6 +7,6 @@ namespace Cle::Gfx::OPENGL43
 	struct EBO
 	{
 		GLuint ID{};
-		EBO(std::vector<unsigned int>& indices);
+		EBO(const std::vector<unsigned int>& indices);
 	};
 }

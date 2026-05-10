@@ -11,7 +11,7 @@ namespace Cle::Gfx
 	{
 		bool usesColorMap = true;
 		Cle::Gfx::OPENGL43::Shader m_Shader;
-		glm::vec4 Color;
+		glm::vec3 Color;
 		Cle::Gfx::OPENGL43::Texture colorMap;
 		Material(Cle::Gfx::OPENGL43::Program Program) : m_Shader(Program.ID) {}
 		Material(GLuint Program) : m_Shader(Program) {}

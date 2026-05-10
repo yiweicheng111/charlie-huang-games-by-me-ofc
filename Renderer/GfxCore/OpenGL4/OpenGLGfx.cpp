@@ -3,14 +3,14 @@
 #include "VBO.h"
 #include "Program.h"
 #include <iostream>
-Cle::Gfx::OPENGL43::VBO::VBO(std::vector<Vertex>& vertices)
+Cle::Gfx::OPENGL43::VBO::VBO(const std::vector<Vertex>& vertices)
 {
 	glGenBuffers(1, &ID);
 	glBindBuffer(GL_ARRAY_BUFFER, ID);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-Cle::Gfx::OPENGL43::EBO::EBO(std::vector<unsigned int>& indices)
+Cle::Gfx::OPENGL43::EBO::EBO(const std::vector<unsigned int>& indices)
 {
 	glGenBuffers(1, &ID);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ID);

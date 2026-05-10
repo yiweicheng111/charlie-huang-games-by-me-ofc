@@ -19,7 +19,7 @@ Cle::Gfx::Material Cle::OPENGL43::Renderer::getMaterial()
 {
 	return Cle::Gfx::Material(programMap["MeshShader"]);
 }
-void Cle::OPENGL43::Renderer::clearFrame(GLFWwindow * window)
+void Cle::OPENGL43::Renderer::clearFrame(GLFWwindow* window)
 {
 	glfwSwapBuffers(window);
 }
@@ -31,7 +31,7 @@ void Cle::OPENGL43::Renderer::clearColor(float r, float g, float b, float w)
 void Cle::OPENGL43::Renderer::uploadMesh(entt::entity e, entt::registry& registry)
 {
 	Cle::Gfx::GenericMesh& mesh = registry.get<Cle::Gfx::GenericMesh>(e);
-	registry.emplace<std::shared_ptr<Cle::Gfx::OPENGL43::Mesh>>(e,std::make_shared<Cle::Gfx::OPENGL43::Mesh>(mesh));
+	registry.emplace<std::shared_ptr<Cle::Gfx::OPENGL43::Mesh>>(e, std::make_shared<Cle::Gfx::OPENGL43::Mesh>(mesh));
 }
 
 void Cle::OPENGL43::Renderer::setSettings()
@@ -48,7 +48,7 @@ void Cle::OPENGL43::Renderer::setSettings()
 
 void Cle::OPENGL43::Renderer::UniformCamMatrix(Cle::Gfx::Camera& camera, Cle::Gfx::Material& material) {
 	glUseProgram(material.m_Shader.programID);
-	glUniformMatrix4fv(glGetUniformLocation(material.m_Shader.programID, "camMatrix"), 1, GL_FALSE, glm::value_ptr(camera.getProjection()*camera.getViewMatrix()));
+	glUniformMatrix4fv(glGetUniformLocation(material.m_Shader.programID, "camMatrix"), 1, GL_FALSE, glm::value_ptr(camera.getProjection() * camera.getViewMatrix()));
 }
 
 void Cle::OPENGL43::Renderer::drawMesh(entt::entity e, entt::registry& registry)
@@ -74,7 +74,7 @@ void Cle::OPENGL43::Renderer::drawMesh(entt::entity e, entt::registry& registry)
 		material.m_Shader.setInt("usesColorMap", (int)(false));
 
 	}
-	
-	
+
+
 	mesh->draw();
 }

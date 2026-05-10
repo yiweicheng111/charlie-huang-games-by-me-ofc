@@ -7,27 +7,32 @@
 #include "OPENGL4/OpenGLMesh.h"
 #include "OPENGL4/Program.h"
 #include <iostream>
-#include "miniaudio/miniaudio.h"
 using Vertex = Cle::Gfx::Vertex;
 std::vector<Vertex> vertices = {
 	Vertex({-0.5f,-0.5f,0.0f},{0.0f,0.0f},{0.0f,0.0f,0.0f}),
 	Vertex({-0.5f,0.5f,0.0f},{0.0f,0.0f},{0.0f,0.0f,0.0f}),
 	Vertex({0.5f,-0.5f,0.0f},{0.0f,0.0f},{0.0f,0.0f,0.0f}),
 };
+
 int main() {
+	srand(time(NULL));
+
 	Cle::Editor::EditorApplication app;
 
 	std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
-	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/alphabet.obj");
+	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/Tree1.obj");
 	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 	for (Cle::Gfx::GenericMesh& I : ModelLoaded) {
-		auto e = app.CreateDebugObject(I.Vertices,I.Indices);
+		auto e = app.CreateDebugObject(I.getVertices(), I.getIndices());
 		app.registry.get<Cle::Gfx::Material>(e) = app.renderer->getMaterial();
 		app.registry.get<Cle::Gfx::Material>(e).colorMap = tex;
 		app.registry.get<Cle::Gfx::Material>(e).usesColorMap = false;
-		app.registry.get<Cle::Gfx::Material>(e).Color = glm::vec4(0.7,0.7,0.7,1);
-
+		app.registry.get<Cle::Gfx::Material>(e).Color = I.assimpRequestedColor;
+	//	std::cout << I.assimpRequestedColor.x << std::endl;
+		app.registry.emplace<Cle::Audio::Sound>(e, "goeshard.mp3", app.audio_engine);
+		app.registry.get<Cle::Audio::Sound>(e).Play();
 		app.renderer->uploadMesh(e, app.registry);
+	//	std::cout << I.assimpRequestedTexturePath << std::endl;
 		app.CopyObject(e);
 
 	}

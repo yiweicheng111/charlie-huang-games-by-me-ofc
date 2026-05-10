@@ -26,6 +26,7 @@ namespace Cle::Editor
 		Cle::Gfx::Camera* m_camera;
 		EditorUI(entt::registry* m_registry, GLFWwindow* m_window, Cle::Gfx::Camera* m_camera);
 		EditorUI() {};
+		void DrawChildren(entt::entity parent);
 		void DrawExplorer();
 		void DrawTopBar();
 		void DrawGizmo(entt::entity entity);

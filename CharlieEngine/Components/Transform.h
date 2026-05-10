@@ -19,10 +19,10 @@ namespace Cle::Components
 		glm::vec3 getScale() { return scale; }
 
 
-		void setScale(glm::vec3 _scale) { scale = _scale; AABBdirty = true; }
-		void setPosition(glm::vec3 _position) { position = _position; AABBdirty = true; }
-		void setOrientation(glm::quat _rot) { orientation = _rot; AABBdirty = true; }
+		void setScale(glm::vec3 _scale) { scale = _scale; dirty = true; }
+		void setPosition(glm::vec3 _position) { position = _position; dirty = true; }
+		void setOrientation(glm::quat _rot) { orientation = _rot; dirty = true; }
 
-		bool AABBdirty = false;
+		bool dirty = false;
 	};
 }

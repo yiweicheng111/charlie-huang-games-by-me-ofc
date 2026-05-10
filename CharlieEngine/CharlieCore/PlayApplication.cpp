@@ -22,7 +22,7 @@ namespace Cle::Core
 		m_camera = Camera(glm::radians(70.0f), 1);
 	}
 
-	entt::entity PlayApplication::CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices)
+	entt::entity PlayApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices)
 	{
 		entt::entity charlie = registry.create();
 		registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);

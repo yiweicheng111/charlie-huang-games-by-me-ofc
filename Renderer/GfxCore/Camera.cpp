@@ -11,7 +11,7 @@ Cle::Gfx::Camera::Camera(float fov, float aspect)
 	this->aspect = aspect;
 	Position = { 0,0,0 };
 	View = glm::lookAt(Position, Position + getForward(), {0,1,0});
-	Projection = glm::perspective(fov, aspect, 0.1f, 1000.0f);
+	Projection = glm::perspective(fov, aspect, near, far);
 }
 
 void Cle::Gfx::Camera::lookAt(glm::vec3 target)
@@ -21,7 +21,7 @@ void Cle::Gfx::Camera::lookAt(glm::vec3 target)
 
 glm::mat4 Cle::Gfx::Camera::getProjection() const
 {
-	return glm::perspective(fov, aspect, 0.1f, 10000000.0f);
+	return glm::perspective(fov, aspect, near, far);
 }
 glm::mat4 Cle::Gfx::Camera::getViewMatrix() const
 {
@@ -31,8 +31,14 @@ glm::vec3 Cle::Gfx::Camera::getForward() const
 {
 	return glm::normalize(glm::vec3(glm::cos(yaw)*glm::cos(pitch),glm::sin(pitch),glm::sin(yaw)*glm::cos(pitch)));
 }
+glm::vec3 Cle::Gfx::Camera::getRight() const
+{
+	return glm::normalize(glm::cross(getForward(), glm::vec3(0, 1, 0)));
+}
 
-
+glm::vec3 Cle::Gfx::Camera::getUp() const {
+	return glm::cross(getRight(), getForward());
+}
 glm::mat4 Cle::Components::Transform::computeMatrix()
 {
 	model = glm::mat4(1.0f);

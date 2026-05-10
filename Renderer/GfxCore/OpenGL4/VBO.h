@@ -7,6 +7,6 @@ namespace Cle::Gfx::OPENGL43
 	struct VBO
 	{
 		GLuint ID{};
-		VBO(std::vector<Vertex>& vertices);
+		VBO(const std::vector<Cle::Gfx::Vertex>& vertices);
 	};
 }

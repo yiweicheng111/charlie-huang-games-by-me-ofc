@@ -13,7 +13,8 @@ namespace Cle::Core
 
 		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
 		PlayApplication();
-		virtual entt::entity CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices) override;
+		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices) override;
+		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent) override = 0;
 		virtual void Run() override;
 		virtual void Render() override;
 		virtual void Update(float dt) override;

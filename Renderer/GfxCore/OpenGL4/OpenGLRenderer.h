@@ -24,6 +24,6 @@ namespace Cle::OPENGL43
 		virtual void setSettings() override;
 		virtual void drawMesh(entt::entity e, entt::registry& registry) override;
 		virtual void UniformCamMatrix(Cle::Gfx::Camera& camera, Cle::Gfx::Material& material) override;
-
+		//virtual void SyncMeshes(entt::registry& registry) override;
 	};
 }

@@ -13,9 +13,51 @@ namespace Cle::Components
 		std::string value{};
 		Name(std::string value) : value(value) {}
 	};
-	struct TreeInfo {
+	struct TreeInfo
+	{
 		entt::entity parent = entt::null;
 		std::vector<entt::entity> Children;
+	};
+	struct Plane
+	{
+		glm::vec3 normal = glm::vec3(0, 1, 0);
+		float distance = 0;
+		float getSignedDistanceToPlane(const glm::vec3& point) const {
+			return glm::dot(normal, point) - distance;
+		}
+		Plane() {}
+		Plane(glm::vec3 point, glm::vec3 _normal) : normal(_normal), distance(glm::dot(normal, point)) {}
+		
+	};
+	struct Frustum
+	{
+		Plane topFace;
+		Plane leftFace;
+		Plane rightFace;
+		Plane bottomFace;
+		Plane farFace;
+		Plane nearFace;
+		Frustum() = default;
+		static Frustum createFrustumInCamera(const Cle::Gfx::Camera& camera);
+	};
+	struct Volume
+	{
+		virtual bool isOnFrustum(const Frustum& frustum, const glm::mat4& model) = 0;
+	};
+	struct Sphere : Cle::Components::Volume
+	{
+		glm::vec3 center = glm::vec3(0.0f);
+		float radius = 0.0f;
+		Sphere(glm::vec3 _center, float _radius) : center(_center), radius(_radius) {}
+		Sphere(){}
+		bool isOnOrForwardPlane(const Plane& plane) {
+
+			return plane.getSignedDistanceToPlane(center) >(- radius);
+
+		}
+		virtual bool isOnFrustum(const Frustum& frustum, const glm::mat4& model) override;               
+		Sphere(const std::vector<Cle::Gfx::Vertex>& vertices);
+		void updateToWorld(const std::vector<Cle::Gfx::Vertex>& vertices, const glm::mat4& model);
 	};
 	struct Ray 
 	{
@@ -25,36 +67,22 @@ namespace Cle::Components
 		void SetFromPointer(double mx, double my,int screenWidth, int screenHeight, Cle::Gfx::Camera& camera);
 		Ray(glm::vec3 origin, glm::vec3 dir) : dir(dir), origin(origin) {}
 	};
-	struct AABB
+	struct AABB : Cle::Components::Volume
 	{
 		glm::vec3 max{};
 		glm::vec3 min{};
+
+		virtual bool isOnFrustum(const Frustum& frustum, const glm::mat4& model) override
+		{
+			return false;
+		}
+
 		AABB() = default;
 		
-		AABB (std::vector<Cle::Gfx::Vertex>& vertices, glm::mat4 model) {
-			min = glm::vec3(std::numeric_limits<float>::max());
-			max = glm::vec3(std::numeric_limits<float>::min());
-			for (auto& verts : vertices) {
-				glm::vec3 world = glm::vec3(model * glm::vec4(verts.Position, 1.0f));
-				min = glm::min(min, world);
-				max = glm::max(min, world);
-			}
-		}
-		AABB(std::vector<Cle::Gfx::Vertex>& vertices) {
-			min = glm::vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-			max = glm::vec3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
-			for (Cle::Gfx::Vertex& v : vertices) {
-				min.x = std::min(min.x, v.Position.x);
-				min.y = std::min(min.y, v.Position.y);
-				min.z = std::min(min.z, v.Position.z);
-
-				max.x = std::max(max.x, v.Position.x);
-				max.y = std::max(max.y, v.Position.y);
-				max.z = std::max(max.z, v.Position.z);
-			}
-
-		}
-		void Translate(glm::vec3 offset) {
+		void updateToWorld(const std::vector<Cle::Gfx::Vertex>& vertices, const glm::mat4& model);
+		AABB(const std::vector<Cle::Gfx::Vertex>& vertices);
+		void Translate(glm::vec3 offset)
+		{
 			min += offset;
 			max += offset;
 		}

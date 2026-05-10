@@ -1,21 +1,49 @@
 #include "EditorApplication.h"
 #include "OpenGL4/OpenGLRenderer.h"
+#include <iostream>
 using namespace Cle::Gfx;
 using namespace Cle::Components;
-static void updateAABBS(entt::registry& registry) {
+void Cle::Editor::EditorApplication::updateAABBS() {
+	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
 	for (auto ent : registry.view<GenericMesh>()) {
 		if (registry.any_of<Transform>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			GenericMesh m = registry.get<GenericMesh>(ent);
-			if (t.AABBdirty) {
-				registry.get<GenericMesh>(ent).m_AABB = AABB(m.Vertices, t.model);
-				t.AABBdirty = false;
+			GenericMesh& m = registry.get<GenericMesh>(ent);
+			glm::mat4 model = t.computeMatrix();
+
+			if (m.m_Bounding_Sphere.isOnFrustum(frustum, model)) {
+				if (t.dirty) {
+					registry.get<GenericMesh>(ent).m_AABB.updateToWorld(m.getVertices(), model);
+					t.dirty = false;
+				}
 			}
 		}
 	}
 }
+void Cle::Editor::EditorApplication::updateBoundingSpheres() {
+	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
+	for (auto ent : registry.view<GenericMesh>()) {
+		if (registry.any_of<Transform>(ent)) {
+			Transform& t = registry.get<Transform>(ent);
+			GenericMesh& m = registry.get<GenericMesh>(ent);
+			glm::mat4 model = t.computeMatrix();
+			if (m.m_Bounding_Sphere.isOnFrustum(frustum, model)) {
+				if (t.dirty) {
+					registry.get<GenericMesh>(ent).m_Bounding_Sphere.updateToWorld(m.getVertices(), model);
+					t.dirty = false;
+				}
+			}	
+		}
+	}
+}
+Cle::Editor::EditorApplication::~EditorApplication()
+{
+	ma_engine_uninit(&audio_engine);
+}
 Cle::Editor::EditorApplication::EditorApplication()
 {
+
+	ma_engine_init(nullptr, &audio_engine);
 	renderer = Renderer::IRenderer::Create();
 	window = glfwCreateWindow(800, 800, "charlie", NULL, NULL);
 	assert(window != NULL);
@@ -32,7 +60,7 @@ Cle::Editor::EditorApplication::EditorApplication()
 	m_UIHandler = Cle::Editor::EditorUI(&registry, window, &m_camera);
 }
 
-entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices)
+entt::entity Cle::Editor::EditorApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices)
 {
 	entt::entity charlie = registry.create();
 	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
@@ -44,7 +72,7 @@ entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::
 	return charlie;
 }
 
-entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::Gfx::Vertex>& defaultVert, std::vector<unsigned int>& indices, entt::entity Parent)
+entt::entity Cle::Editor::EditorApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent)
 {
 	entt::entity charlie = registry.create();
 	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
@@ -58,7 +86,17 @@ entt::entity Cle::Editor::EditorApplication::CreateDebugObject(std::vector<Cle::
 	return charlie;
 	
 }
-
+void Cle::Editor::EditorApplication::AudioPass() {
+	for (auto e : registry.view<Cle::Audio::Sound>()) {
+		auto& sound = registry.get<Cle::Audio::Sound>(e);
+		if (registry.all_of<Cle::Components::Transform>(e) && !sound.global) {
+			glm::vec3 position = registry.get<Cle::Components::Transform>(e).getPosition();
+			sound.position = position;
+			sound.UpdateVolume(m_camera.Position);
+			continue;
+		}
+	}
+}
 entt::entity Cle::Editor::EditorApplication::CopyObject(entt::entity existing)
 {
 	entt::entity newent = registry.create();
@@ -107,6 +145,7 @@ void Cle::Editor::EditorApplication::runHotKey()
 
 void Cle::Editor::EditorApplication::runPointer()
 {
+
 	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS && !ImGuizmo::IsUsing()) {
 		m_UIHandler.m_Focused_Entity = entt::null;
 		int winWidth, winHeight;
@@ -115,7 +154,7 @@ void Cle::Editor::EditorApplication::runPointer()
 		glfwGetWindowSize(window, &winWidth, &winHeight);
 		Cle::Components::Ray ray;
 		ray.SetFromPointer(pX, pY, winWidth, winHeight, m_camera);
-		float nearestD = std::numeric_limits<float>::max();
+		float nearestD = (std::numeric_limits<float>::max)();
 		entt::entity nearestEnt = entt::null;
 		for (auto& ent : registry.view<GenericMesh>()) {
 			AABB aabb = registry.get<GenericMesh>(ent).m_AABB;
@@ -138,6 +177,7 @@ void Cle::Editor::EditorApplication::Run()
 
 	while (!glfwWindowShouldClose(window))
 	{
+		AudioPass();
 		renderer->beginFrame();
 		Render();
 		Update(0.1f);
@@ -147,21 +187,33 @@ void Cle::Editor::EditorApplication::Run()
 
 void Cle::Editor::EditorApplication::Render()
 {
+	//renderer->SyncMeshes(registry);
+	
 	int width, height;
 	glfwGetWindowSize(window, &width, &height);
+	if (width == 0 || height == 0) return;
 	m_camera.aspect = float(width) / height;
+	int totalMeshes = 0;
+	int totalDrawn = 0;
+	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
 	for (auto entity : registry.view<GenericMesh>())
 	{
+		auto& mesh = registry.get<GenericMesh>(entity);
 		Transform& transform = registry.get<Transform>(entity);
-		Cle::Gfx::Material material = registry.get<Cle::Gfx::Material>(entity);
+		Cle::Gfx::Material& material = registry.get<Cle::Gfx::Material>(entity);
 		renderer->UniformCamMatrix(m_camera, material);
-		renderer->drawMesh(entity, registry);
+		totalMeshes++;
+		if (mesh.m_Bounding_Sphere.isOnFrustum(frustum,transform.computeMatrix())) {
+			renderer->drawMesh(entity, registry);
+			totalDrawn++;
+		}
 	}
+	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 }
 void Cle::Editor::EditorApplication::Update(float dt) {
 	m_Controller.Poll();
 	m_UIHandler.Update();
-	updateAABBS(registry);
+	updateAABBS();
 	runHotKey();
 	runPointer();
 }
