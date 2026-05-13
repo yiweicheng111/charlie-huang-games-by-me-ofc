@@ -23,6 +23,8 @@ namespace Cle::Gfx
 		GenericMesh() {};
 		GenericMesh(const GenericMesh& other) = default;
 
+		glm::vec3 offset{};
+		bool OffsetDirty = false;
 		GenericMesh::DirtyLevel Dirty = DirtyLevel::NONE;
 		Cle::Components::AABB m_local_AABB;
 		Cle::Components::AABB m_AABB;
@@ -51,11 +53,12 @@ namespace Cle::Gfx
 			return Indices;
 		}
 		GenericMesh(const std::vector<Cle::Gfx::Vertex>& _Vertices) : Vertices(_Vertices) {
+			if (_Vertices.empty()) return;
 			m_AABB = Cle::Components::AABB(_Vertices);
 			m_local_AABB = Cle::Components::AABB(_Vertices);
 		}	
 		GenericMesh(const std::vector<Cle::Gfx::Vertex>& _Vertices, const std::vector<unsigned int>& _Indices) : Vertices(_Vertices), Indices(_Indices) {
-			
+			if (_Vertices.empty()) return;
 			m_AABB=Cle::Components::AABB(_Vertices);
 			m_local_AABB = Cle::Components::AABB(_Vertices);
 			m_local_Bounding_Sphere = Cle::Components::Sphere(_Vertices);
@@ -64,9 +67,8 @@ namespace Cle::Gfx
 		}
 	};
 	struct GenericMeshHandler {
-		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene);
+		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 parentTransform);
 		GenericMesh ProcessMesh(aiMesh* Mesh, const aiScene* scene);
 		std::vector<GenericMesh> LoadModel(const char* path);
-		void FixGizmoCenter(entt::entity entity, entt::registry& registry);
 	};
 }

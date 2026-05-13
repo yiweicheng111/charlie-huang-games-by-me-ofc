@@ -30,7 +30,7 @@ void Cle::OPENGL43::Renderer::clearColor(float r, float g, float b, float w)
 }
 void Cle::OPENGL43::Renderer::uploadMesh(entt::entity e, entt::registry& registry)
 {
-	Cle::Gfx::GenericMesh& mesh = registry.get<Cle::Gfx::GenericMesh>(e);
+	Cle::Gfx::GenericMesh mesh = registry.get<Cle::Gfx::GenericMesh>(e);
 	registry.emplace<std::shared_ptr<Cle::Gfx::OPENGL43::Mesh>>(e, std::make_shared<Cle::Gfx::OPENGL43::Mesh>(mesh));
 }
 

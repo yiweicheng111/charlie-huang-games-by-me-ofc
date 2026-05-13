@@ -16,12 +16,13 @@ namespace Cle::Audio {
 		ma_sound sound;
 		float volume = 1;
 		bool global = false;
+		std::string path;
 		glm::vec3 position = glm::vec3(0.0f);
 		~Sound()
 		{
 			ma_sound_uninit(&sound);
 		}
-		explicit Sound(std::string path, ma_engine& engine) {
+		explicit Sound(std::string path, ma_engine& engine) : path(path) {
 			ma_sound_init_from_file(&engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE, nullptr, nullptr, &sound);
 		}
 		void Play()

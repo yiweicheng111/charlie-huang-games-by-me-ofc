@@ -7,14 +7,16 @@ file(GLOB_RECURSE EngineFiles
     "${CMAKE_CURRENT_SOURCE_DIR}/Scripting/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/Editor/*.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/Editor/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Components/*.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/Components/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Components/Ray.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Components/Frustum.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Components/Sphere.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Components/AABB.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/PlayApplication.cpp"
     "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
     "${PROJECT_SOURCE_DIR}/Library/vendor/miniaudio/*.c"
 )
-
 add_library(CharlieEngine STATIC ${EngineFiles})
 target_include_directories(CharlieEngine PUBLIC
     "${PROJECT_SOURCE_DIR}/Library/include"

@@ -17,6 +17,7 @@ namespace Cle::Editor
 		EditorApplication();
 		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices) override;
 		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices,entt::entity Parent) override;
+		virtual entt::entity CreateDebugObject(const Cle::Gfx::GenericMesh& GMesh) override;
 		virtual entt::entity CopyObject(entt::entity existing) override;
 		virtual void DestroyObject(entt::entity existing) override;
 		virtual void AudioPass() override;

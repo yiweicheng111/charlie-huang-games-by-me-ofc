@@ -13,7 +13,7 @@ namespace Cle::Editor
 		Cle::Gfx::Camera* m_Camera;
 		GLFWwindow* m_Window;
 		float sensitivity = 0.001f;
-		float speed = 5.25f;
+		float speed = 0.25f;
 		FreeCameraControls(Cle::Gfx::Camera* Camera, GLFWwindow* Window) : m_Camera(Camera), m_Window(Window)
 		{
 			glfwGetCursorPos(m_Window, &lastX, &lastY);

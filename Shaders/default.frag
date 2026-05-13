@@ -9,6 +9,6 @@ void main(){
 	 		FragColor = texture(colorMap,texCoord);
 	 }
 	 else{
-		FragColor = vec4(1,0,0,1);
+		FragColor = vec4(color,1);
 	 }
 }

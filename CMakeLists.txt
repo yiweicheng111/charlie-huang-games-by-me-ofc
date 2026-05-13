@@ -19,6 +19,7 @@ add_custom_target(CopyShaders ALL
     "${PROJECT_SOURCE_DIR}/Shaders"
     "${CMAKE_CURRENT_BINARY_DIR}"
 )  
+
 add_subdirectory(Renderer)
 add_subdirectory(CharlieEngine)
 add_subdirectory(CharlieEditor)

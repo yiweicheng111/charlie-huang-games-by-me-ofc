@@ -18,22 +18,24 @@ int main() {
 	srand(time(NULL));
 
 	Cle::Editor::EditorApplication app;
+	auto radio = app.registry.create();
+	app.registry.emplace<Cle::Audio::Sound>(radio, "goeshard.mp3", app.audio_engine);
+	app.registry.get<Cle::Audio::Sound>(radio).Play();
+	app.registry.get<Cle::Audio::Sound>(radio).global = true;
 
 	std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
-	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/Tree1.obj");
+	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/Bambo_House.obj");
 	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 	for (Cle::Gfx::GenericMesh& I : ModelLoaded) {
-		auto e = app.CreateDebugObject(I.getVertices(), I.getIndices());
-		app.registry.get<Cle::Gfx::Material>(e) = app.renderer->getMaterial();
+		auto e = app.CreateDebugObject(I);
 		app.registry.get<Cle::Gfx::Material>(e).colorMap = tex;
 		app.registry.get<Cle::Gfx::Material>(e).usesColorMap = false;
 		app.registry.get<Cle::Gfx::Material>(e).Color = I.assimpRequestedColor;
-	//	std::cout << I.assimpRequestedColor.x << std::endl;
-		app.registry.emplace<Cle::Audio::Sound>(e, "goeshard.mp3", app.audio_engine);
-		app.registry.get<Cle::Audio::Sound>(e).Play();
+		//	std::cout << I.assimpRequestedColor.x << std::endl;
+	
 		app.renderer->uploadMesh(e, app.registry);
-	//	std::cout << I.assimpRequestedTexturePath << std::endl;
-		app.CopyObject(e);
+		//	std::cout << I.assimpRequestedTexturePath << std::endl;
+	
 
 	}
 

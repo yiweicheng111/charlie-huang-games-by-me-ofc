@@ -1,5 +1,6 @@
 #include "EditorApplication.h"
 #include "OpenGL4/OpenGLRenderer.h"
+#include <glm/glm.hpp>
 #include <iostream>
 using namespace Cle::Gfx;
 using namespace Cle::Components;
@@ -20,6 +21,7 @@ void Cle::Editor::EditorApplication::updateAABBS() {
 		}
 	}
 }
+
 void Cle::Editor::EditorApplication::updateBoundingSpheres() {
 	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
 	for (auto ent : registry.view<GenericMesh>()) {
@@ -85,6 +87,21 @@ entt::entity Cle::Editor::EditorApplication::CreateDebugObject(const std::vector
 
 	return charlie;
 	
+}
+entt::entity Cle::Editor::EditorApplication::CreateDebugObject(const GenericMesh& GMesh)
+{
+	entt::entity charlie = registry.create();
+	registry.emplace<Cle::Gfx::Material>(charlie, renderer->getMaterial());
+	registry.emplace<Cle::Gfx::GenericMesh>(charlie, GMesh);
+	const Cle::Gfx::GenericMesh& m = registry.get<Cle::Gfx::GenericMesh>(charlie);
+	registry.emplace<Cle::Components::Transform>(charlie);
+	registry.get<Cle::Components::Transform>(charlie).setPosition(registry.get<Cle::Gfx::GenericMesh>(charlie).offset);
+	std::cout << "Mesh placed at: " << m.offset.x << ", " << m.offset.y << ", " << m.offset.z << std::endl;
+	registry.emplace<Cle::Components::Name>(charlie, "charlie");
+	registry.emplace<TreeInfo>(charlie);
+
+	return charlie;
+
 }
 void Cle::Editor::EditorApplication::AudioPass() {
 	for (auto e : registry.view<Cle::Audio::Sound>()) {
@@ -199,16 +216,18 @@ void Cle::Editor::EditorApplication::Render()
 	for (auto entity : registry.view<GenericMesh>())
 	{
 		auto& mesh = registry.get<GenericMesh>(entity);
+		
 		Transform& transform = registry.get<Transform>(entity);
 		Cle::Gfx::Material& material = registry.get<Cle::Gfx::Material>(entity);
 		renderer->UniformCamMatrix(m_camera, material);
 		totalMeshes++;
 		if (mesh.m_Bounding_Sphere.isOnFrustum(frustum,transform.computeMatrix())) {
+
 			renderer->drawMesh(entity, registry);
 			totalDrawn++;
 		}
 	}
-	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
+	std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 }
 void Cle::Editor::EditorApplication::Update(float dt) {
 	m_Controller.Poll();
