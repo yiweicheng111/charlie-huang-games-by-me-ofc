@@ -39,8 +39,8 @@ void Cle::OPENGL43::Renderer::setSettings()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	[&] {
-		std::vector<std::string> shaders = { "default.frag" };
-		Cle::Gfx::OPENGL43::Program program("default.vert", shaders);
+		std::vector<std::string> shaders = { "Shaders/default.frag" };
+		Cle::Gfx::OPENGL43::Program program("Shaders/default.vert", shaders);
 		programMap["MeshShader"] = program.ID;
 		}();
 }

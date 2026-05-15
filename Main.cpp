@@ -1,4 +1,4 @@
-
+﻿
 #include "IRenderer.h"
 #include "EditorApplication.h"
 #include "Mesh.h"
@@ -7,6 +7,8 @@
 #include "OPENGL4/OpenGLMesh.h"
 #include "OPENGL4/Program.h"
 #include <iostream>
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
 using Vertex = Cle::Gfx::Vertex;
 std::vector<Vertex> vertices = {
 	Vertex({-0.5f,-0.5f,0.0f},{0.0f,0.0f},{0.0f,0.0f,0.0f}),
@@ -15,6 +17,18 @@ std::vector<Vertex> vertices = {
 };
 
 int main() {
+	
+
+
+
+
+
+
+
+
+
+
+
 	srand(time(NULL));
 
 	Cle::Editor::EditorApplication app;
@@ -23,12 +37,13 @@ int main() {
 	app.registry.get<Cle::Audio::Sound>(radio).Play();
 	app.registry.get<Cle::Audio::Sound>(radio).global = true;
 
-	std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
+	//std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
+	//std::filesystem::current_path("../");
+	std::cout << std::filesystem::current_path() << std::endl;;
 	std::vector< Cle::Gfx::GenericMesh> ModelLoaded = app.renderer->m_GenericMeshHandler.LoadModel("Models/Bambo_House.obj");
-	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
+//	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 	for (Cle::Gfx::GenericMesh& I : ModelLoaded) {
 		auto e = app.CreateDebugObject(I);
-		app.registry.get<Cle::Gfx::Material>(e).colorMap = tex;
 		app.registry.get<Cle::Gfx::Material>(e).usesColorMap = false;
 		app.registry.get<Cle::Gfx::Material>(e).Color = I.assimpRequestedColor;
 		//	std::cout << I.assimpRequestedColor.x << std::endl;

@@ -96,7 +96,6 @@ entt::entity Cle::Editor::EditorApplication::CreateDebugObject(const GenericMesh
 	const Cle::Gfx::GenericMesh& m = registry.get<Cle::Gfx::GenericMesh>(charlie);
 	registry.emplace<Cle::Components::Transform>(charlie);
 	registry.get<Cle::Components::Transform>(charlie).setPosition(registry.get<Cle::Gfx::GenericMesh>(charlie).offset);
-	std::cout << "Mesh placed at: " << m.offset.x << ", " << m.offset.y << ", " << m.offset.z << std::endl;
 	registry.emplace<Cle::Components::Name>(charlie, "charlie");
 	registry.emplace<TreeInfo>(charlie);
 

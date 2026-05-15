@@ -16,13 +16,13 @@ target_include_directories(
 )
 add_custom_target(CopyShaders ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${PROJECT_SOURCE_DIR}/Shaders"
+    "${PROJECT_SOURCE_DIR}/Assets"
     "${CMAKE_CURRENT_BINARY_DIR}"
 )  
 
 add_subdirectory(Renderer)
 add_subdirectory(CharlieEngine)
 add_subdirectory(CharlieEditor)
-
-target_link_libraries(Charlie PUBLIC Renderer CharlieEngine CharlieEditor "${PROJECT_SOURCE_DIR}/Library/lib/assimp.lib")
+target_compile_definitions(Charlie PRIVATE JPH_FLOATING_POINT_EXCEPTIONS_ENABLED JPH_OBJECT_STREAM JPH_PROFILE_ENABLED)
+target_link_libraries(Charlie PUBLIC Renderer CharlieEngine CharlieEditor "${PROJECT_SOURCE_DIR}/Library/lib/assimp.lib"  "${PROJECT_SOURCE_DIR}/Library/lib/Jolt.lib")
 add_dependencies(Charlie CopyShaders)

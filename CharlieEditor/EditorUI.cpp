@@ -11,7 +11,6 @@ namespace Cle::Editor
 		io = &ImGui::GetIO();
 		io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
 
 		io->Fonts->AddFontFromFileTTF("./fonts/OpenSans.ttf", 18.0f);
 
