@@ -10,11 +10,11 @@ namespace Cle::Gfx
 	struct Material
 	{
 		bool usesColorMap = true;
-		Cle::Gfx::OPENGL43::Shader m_Shader;
+		Cle::OPENGL::Shader m_Shader;
 		glm::vec3 Color;
-		Cle::Gfx::OPENGL43::Texture colorMap;
-		std::vector<Cle::Gfx::OPENGL43::Texture> faceTextures;
-		Material(Cle::Gfx::OPENGL43::Program Program) : m_Shader(Program.ID) {}
+		Cle::OPENGL::Texture colorMap;
+		std::vector<Cle::OPENGL::Texture> faceTextures;
+		Material(Cle::OPENGL::Program Program) : m_Shader(Program.ID) {}
 		Material(GLuint Program) : m_Shader(Program) {}
 
 	};

@@ -4,7 +4,7 @@
 #endif
 #include "stb/stb_image.h"
 #include <iostream>
-using namespace Cle::Gfx::OPENGL43;
+using namespace Cle::OPENGL;
 Texture::Texture(const char* path) {
 	glGenTextures(1, &ID);
 	glBindTexture(GL_TEXTURE_2D, ID);

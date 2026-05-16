@@ -3,34 +3,35 @@
 #include "VBO.h"
 #include "Program.h"
 #include <iostream>
-Cle::Gfx::OPENGL43::VBO::VBO(const std::vector<Vertex>& vertices)
+using namespace Cle::Gfx;
+Cle::OPENGL::VBO::VBO(const std::vector<Vertex>& vertices)
 {
 	glGenBuffers(1, &ID);
 	glBindBuffer(GL_ARRAY_BUFFER, ID);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
-Cle::Gfx::OPENGL43::EBO::EBO(const std::vector<unsigned int>& indices)
+Cle::OPENGL::EBO::EBO(const std::vector<unsigned int>& indices)
 {
 	glGenBuffers(1, &ID);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ID);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_DYNAMIC_DRAW);
 }
 
-Cle::Gfx::OPENGL43::VAO::VAO(GLuint VBO)
+Cle::OPENGL::VAO::VAO(GLuint VBO)
 {
 	glGenVertexArrays(1, &ID);
 	glBindVertexArray(ID);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 }
 
-void Cle::Gfx::OPENGL43::VAO::LinkAttrib(int location, int attribs, GLenum dataType, unsigned char normalize, int stride, int pointer)
+void Cle::OPENGL::VAO::LinkAttrib(int location, int attribs, GLenum dataType, unsigned char normalize, int stride, int pointer)
 {
 	glVertexAttribPointer(location, attribs, dataType, normalize, stride, (void*)(pointer*sizeof(float)));
 	glEnableVertexAttribArray(location);
 }
 
-Cle::Gfx::OPENGL43::Program::Program(std::string vertexShaderPath, std::vector<std::string>& fragmentShadersPath)
+Cle::OPENGL::Program::Program(std::string vertexShaderPath, std::vector<std::string>& fragmentShadersPath)
 {
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	std::string read = readFile(vertexShaderPath);

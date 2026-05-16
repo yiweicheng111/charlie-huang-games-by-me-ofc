@@ -46,7 +46,7 @@ Cle::Editor::EditorApplication::EditorApplication()
 {
 
 	ma_engine_init(nullptr, &audio_engine);
-	renderer = Renderer::IRenderer::Create();
+	renderer = Renderer::IRenderer::Create(&registry);
 	window = glfwCreateWindow(800, 800, "charlie", NULL, NULL);
 	assert(window != NULL);
 	glfwMakeContextCurrent(window);

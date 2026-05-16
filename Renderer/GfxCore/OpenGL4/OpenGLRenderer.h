@@ -7,17 +7,19 @@
 #include <entt/entt.hpp>
 #include "Material.h"
 #include "OpenGLMesh.h"
-
-using namespace Cle::Gfx::OPENGL43;
-namespace Cle::OPENGL43
+#include "OpenGL4/LightBuffer.h"
+using namespace Cle::OPENGL;
+namespace Cle::OPENGL
 {
 	class Renderer : public Cle::Renderer::IRenderer
 	{
 	public:
+		entt::registry* m_registry;
 		std::unordered_map<std::string, GLuint> programMap;
-		Renderer();
+		Renderer(entt::registry* registry);
 		virtual Cle::Gfx::Material getMaterial() override;
 		virtual void beginFrame() override;
+		virtual void lightPass() override;
 		virtual void clearFrame(GLFWwindow* window) override;
 		virtual void clearColor(float r, float g, float b, float w) override;
 		virtual void uploadMesh(entt::entity e, entt::registry& registry) override;

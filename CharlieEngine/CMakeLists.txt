@@ -13,7 +13,7 @@ file(GLOB_RECURSE EngineFiles
     "${CMAKE_CURRENT_SOURCE_DIR}/Components/Sphere.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/Components/AABB.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/PlayApplication.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/ReleaseApp.cpp"
     "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
     "${PROJECT_SOURCE_DIR}/Library/vendor/miniaudio/*.c"
 )

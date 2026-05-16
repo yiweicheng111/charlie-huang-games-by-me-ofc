@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include <entt/entt.hpp>
 #include "Transform.h"
+#include "LightComponent.h"
 namespace Cle::Components
 {
 	struct Name

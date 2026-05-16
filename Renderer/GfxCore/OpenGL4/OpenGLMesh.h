@@ -7,7 +7,7 @@
 #include "VBO.h"
 #include "GfxBase.h"
 #include <iostream>
-namespace Cle::Gfx::OPENGL43 
+namespace Cle::OPENGL 
 {
 	struct Mesh : Cle::Gfx::IMesh
 	{

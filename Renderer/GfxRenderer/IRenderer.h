@@ -16,7 +16,7 @@ namespace Cle::Renderer
 	{
 	public:
 		Cle::Gfx::GenericMeshHandler m_GenericMeshHandler;
-
+		entt::registry* m_registry;
 		virtual ~IRenderer() = default;
 		virtual Cle::Gfx::Material getMaterial() = 0;
 		virtual void setSettings() = 0;
@@ -27,7 +27,8 @@ namespace Cle::Renderer
 		virtual void uploadMesh(entt::entity e, entt::registry& registry) = 0;
 		//virtual void SyncMeshes(entt::registry& registry) = 0;
 		virtual void UniformCamMatrix(Cle::Gfx::Camera& camera, Cle::Gfx::Material& material) = 0;
+		virtual void lightPass() = 0;
 
-		static std::shared_ptr<IRenderer> Create();
+		static std::shared_ptr<IRenderer> Create(entt::registry* registry);
 	};
 }

@@ -1,11 +1,11 @@
-#include "PlayApplication.h"
+#include "ReleaseApp.h"
 #include "OpenGL4/OpenGLRenderer.h"
 #include <iostream>
 using namespace Cle::Gfx;
 using namespace Cle::Components;
 using namespace Cle::Core;
 
-void PlayApplication::updateBoundingSpheres() {
+void ReleaseApp::updateBoundingSpheres() {
 	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
 	for (auto ent : registry.view<GenericMesh>()) {
 		if (registry.any_of<Transform>(ent)) {
@@ -21,15 +21,15 @@ void PlayApplication::updateBoundingSpheres() {
 		}
 	}
 }
-PlayApplication::~PlayApplication()
+ReleaseApp::~ReleaseApp()
 {
 	ma_engine_uninit(&audio_engine);
 }
-PlayApplication::PlayApplication()
+ReleaseApp::ReleaseApp()
 {
 
 	ma_engine_init(nullptr, &audio_engine);
-	renderer = Renderer::IRenderer::Create();
+	renderer = Renderer::IRenderer::Create(&registry);
 	window = glfwCreateWindow(800, 800, "charlie", NULL, NULL);
 	assert(window != NULL);
 	glfwMakeContextCurrent(window);
@@ -43,7 +43,7 @@ PlayApplication::PlayApplication()
 	m_camera = Camera(glm::radians(70.0f), 1);
 }
 
-entt::entity PlayApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices)
+entt::entity ReleaseApp::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices)
 {
 	entt::entity charlie = registry.create();
 	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
@@ -55,7 +55,7 @@ entt::entity PlayApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vert
 	return charlie;
 }
 
-entt::entity PlayApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent)
+entt::entity ReleaseApp::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent)
 {
 	entt::entity charlie = registry.create();
 	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
@@ -69,7 +69,7 @@ entt::entity PlayApplication::CreateDebugObject(const std::vector<Cle::Gfx::Vert
 	return charlie;
 
 }
-void PlayApplication::AudioPass() {
+void ReleaseApp::AudioPass() {
 	for (auto e : registry.view<Cle::Audio::Sound>()) {
 		auto& sound = registry.get<Cle::Audio::Sound>(e);
 		if (registry.all_of<Cle::Components::Transform>(e) && !sound.global) {
@@ -80,7 +80,7 @@ void PlayApplication::AudioPass() {
 		}
 	}
 }
-entt::entity PlayApplication::CopyObject(entt::entity existing)
+entt::entity ReleaseApp::CopyObject(entt::entity existing)
 {
 	entt::entity newent = registry.create();
 	if (registry.all_of<Transform>(existing)) {
@@ -102,7 +102,7 @@ entt::entity PlayApplication::CopyObject(entt::entity existing)
 	return newent;
 }
 
-void PlayApplication::DestroyObject(entt::entity existing)
+void ReleaseApp::DestroyObject(entt::entity existing)
 {
 
 	if (!registry.valid(existing)) return;
@@ -116,7 +116,7 @@ void PlayApplication::DestroyObject(entt::entity existing)
 
 
 
-void PlayApplication::Run()
+void ReleaseApp::Run()
 {
 
 	while (!glfwWindowShouldClose(window))
@@ -129,7 +129,7 @@ void PlayApplication::Run()
 	}
 }
 
-void PlayApplication::Render()
+void ReleaseApp::Render()
 {
 	//renderer->SyncMeshes(registry);
 
@@ -154,6 +154,6 @@ void PlayApplication::Render()
 	}
 	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 }
-void PlayApplication::Update(float dt) {
+void ReleaseApp::Update(float dt) {
 
 }

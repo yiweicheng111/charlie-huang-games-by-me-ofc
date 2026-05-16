@@ -17,18 +17,6 @@ std::vector<Vertex> vertices = {
 };
 
 int main() {
-	
-
-
-
-
-
-
-
-
-
-
-
 	srand(time(NULL));
 
 	Cle::Editor::EditorApplication app;

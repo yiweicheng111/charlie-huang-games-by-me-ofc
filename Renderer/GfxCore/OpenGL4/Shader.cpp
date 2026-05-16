@@ -1,11 +1,11 @@
 #include "Shader.h"
 #include <glm/gtc/type_ptr.hpp>
-void Cle::Gfx::OPENGL43::Shader::Bind()
+void Cle::OPENGL::Shader::Bind()
 {
 	glUseProgram(programID);
 }
 
-void Cle::Gfx::OPENGL43::Shader::setMat4(std::string uniform, glm::mat4 arg)
+void Cle::OPENGL::Shader::setMat4(std::string uniform, glm::mat4 arg)
 {
 	int location{};
 	if (uniformsCache.contains(uniform)) {
@@ -20,7 +20,7 @@ void Cle::Gfx::OPENGL43::Shader::setMat4(std::string uniform, glm::mat4 arg)
 
 
 
-void Cle::Gfx::OPENGL43::Shader::setFloat(std::string uniform, float arg)
+void Cle::OPENGL::Shader::setFloat(std::string uniform, float arg)
 {
 	int location{};
 	if (uniformsCache.contains(uniform)) {
@@ -34,7 +34,7 @@ void Cle::Gfx::OPENGL43::Shader::setFloat(std::string uniform, float arg)
 	
 }
 
-void Cle::Gfx::OPENGL43::Shader::setVec3(std::string uniform, glm::vec3 arg)
+void Cle::OPENGL::Shader::setVec3(std::string uniform, glm::vec3 arg)
 {
 	int location{};
 	if (uniformsCache.contains(uniform)) {
@@ -47,7 +47,7 @@ void Cle::Gfx::OPENGL43::Shader::setVec3(std::string uniform, glm::vec3 arg)
 	glUniform3f(location, arg.x, arg.y, arg.z);
 }
 
-void Cle::Gfx::OPENGL43::Shader::setVec4(std::string uniform, glm::vec4 arg)
+void Cle::OPENGL::Shader::setVec4(std::string uniform, glm::vec4 arg)
 {
 	int location{};
 	if (uniformsCache.contains(uniform)) {
@@ -60,7 +60,7 @@ void Cle::Gfx::OPENGL43::Shader::setVec4(std::string uniform, glm::vec4 arg)
 	glUniform4f(location, arg.x, arg.y, arg.z,arg.w);
 }
 
-void Cle::Gfx::OPENGL43::Shader::setInt(std::string uniform, int arg)
+void Cle::OPENGL::Shader::setInt(std::string uniform, int arg)
 {
 	int location{};
 	if (uniformsCache.contains(uniform)) {
@@ -72,3 +72,4 @@ void Cle::Gfx::OPENGL43::Shader::setInt(std::string uniform, int arg)
 	}
 	glUniform1i(location, arg);
 }
+

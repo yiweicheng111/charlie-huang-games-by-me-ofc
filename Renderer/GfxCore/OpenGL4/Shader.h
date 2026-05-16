@@ -1,7 +1,8 @@
 #pragma once
 #include "OpenGL4/VAO.h"
+#include "Light.h"
 #include <unordered_map>
-namespace Cle::Gfx::OPENGL43
+namespace Cle::OPENGL
 {
 	struct Shader
 	{
@@ -14,6 +15,6 @@ namespace Cle::Gfx::OPENGL43
 		void setVec3(std::string uniform, glm::vec3 arg);
 		void setVec4(std::string uniform, glm::vec4 arg);
 		void setInt(std::string uniform, int arg);
-
+		void UniformLights(std::vector<Cle::Gfx::Light> Lights);
 	};
 }

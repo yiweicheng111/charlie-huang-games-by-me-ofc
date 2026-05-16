@@ -3,14 +3,15 @@
 #include "IRenderer.h"
 namespace Cle::Core
 {
-	class PlayApplication : public  Cle::Core::Application
+	class ReleaseApp : public  Cle::Core::Application
 	{
+
 	public:
 		Cle::Scripting::ScriptHandler m_ScriptHandler;
 
 		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
-		~PlayApplication();
-		PlayApplication();
+		~ReleaseApp();
+		ReleaseApp();
 		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices) override;
 		virtual entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent) override;
 		virtual entt::entity CopyObject(entt::entity existing) override;

@@ -1,7 +1,7 @@
 #pragma once
 #include "OpenGL4/VAO.h"
 #include "stb/stb_image.h"
-namespace Cle::Gfx::OPENGL43 
+namespace Cle::OPENGL 
 {
 
 	struct Texture

@@ -29,7 +29,6 @@ namespace Cle::Core
 		virtual void Update(float dt) = 0;
 		virtual void updateBoundingSpheres() = 0;
 		virtual entt::entity CopyObject(entt::entity existing) = 0;
-		double Random();
 	private:
 		//std::unique_ptr<IWindow> window;
 		bool running = true;
