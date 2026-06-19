@@ -1,0 +1,113 @@
+#pragma once
+#include <string>
+#include <glm/glm.hpp>
+#include <functional>
+#include "GfxBase.h"
+#include "Camera.h"
+#include <entt/entt.hpp>
+#include "Transform.h"
+#include "LightComponent.h"
+
+namespace Cle::Components
+{
+
+	struct Name
+	{
+		std::string value{};
+		Name() : value("untitled") {}
+		Name(std::string value) : value(value) {}
+	};
+	struct TreeInfo
+	{
+		entt::entity parent = entt::null;
+		std::vector<entt::entity> Children;
+	};
+	struct Plane
+	{
+		glm::vec3 normal = glm::vec3(0, 1, 0);
+		float distance = 0;
+		float getSignedDistanceToPlane(const glm::vec3& point) const {
+			return glm::dot(normal, point) - distance;
+		}
+		Plane() {}
+		Plane(glm::vec3 point, glm::vec3 _normal) : normal(_normal), distance(glm::dot(normal, point)) {}
+		
+	};
+	struct Frustum
+	{
+		Plane topFace;
+		Plane leftFace;
+		Plane rightFace;
+		Plane bottomFace;
+		Plane farFace;
+		Plane nearFace;
+		Frustum() = default;
+		static Frustum createFrustumInCamera(const Cle::Gfx::Camera& camera);
+	};
+	struct Volume
+	{
+		virtual bool isOnFrustum(const Frustum& frustum, const glm::mat4& model) = 0;
+	};
+	struct Sphere : Cle::Components::Volume
+	{
+		bool dirty = true;
+
+		glm::vec3 center = glm::vec3(0.0f);
+		glm::vec3 localCenter = glm::vec3(0.0f);
+
+		float radius = 0.0f;
+		float localRadius = 0.0f;
+
+		Sphere(glm::vec3 _center, float _radius) : center(_center), radius(_radius) {}
+		Sphere(){}
+		bool isOnOrForwardPlane(const Plane& plane) {
+
+			return plane.getSignedDistanceToPlane(center) >(- radius);
+
+		}
+		virtual bool isOnFrustum(const Frustum& frustum, const glm::mat4& model) override;               
+		Sphere(const std::vector<Cle::Gfx::Vertex>& vertices);
+		void updateToWorld(const std::vector<Cle::Gfx::Vertex>& vertices, const glm::mat4& model);
+	};
+	struct Ray 
+	{
+		Ray() = default;
+		glm::vec3 origin{};
+		glm::vec3 dir{};
+		void SetFromPointer(double mx, double my,int screenWidth, int screenHeight, Cle::Gfx::Camera& camera);
+		Ray(glm::vec3 origin, glm::vec3 dir) : dir(dir), origin(origin) {}
+	};
+	struct AABB : Cle::Components::Volume
+	{
+		glm::vec3 max{};
+		glm::vec3 min{};
+		bool dirty = true;
+
+		virtual bool isOnFrustum(const Frustum& frustum, const glm::mat4& model) override
+		{
+			return false;
+		}
+
+		AABB() = default;
+		
+		void updateToWorld(const std::vector<Cle::Gfx::Vertex>& vertices, const glm::mat4& model);
+		AABB(const std::vector<Cle::Gfx::Vertex>& vertices);
+		void Translate(glm::vec3 offset)
+		{
+			min += offset;
+			max += offset;
+		}
+		bool intersects(AABB& other);
+		float intersects(Ray& ray);
+	};
+	struct CubeMapTexture
+	{
+		std::string right;
+		std::string left;
+		std::string top;
+		std::string bottom;
+		std::string front;
+		std::string back;
+
+	};
+}
