@@ -12,10 +12,10 @@ namespace Cle::Gfx
 	{
 	private:
 		glm::vec3 Color = glm::vec3(1.0f);
-		Cle::OPENGL::Texture colorMap;
+		std::shared_ptr<ITexture> colorMap;
 	public:
+		bool gpuUploaded = false;
 		bool dirty = false;
-		
 		void setColor(glm::vec3 _Color)
 		{
 			dirty = true;
@@ -25,20 +25,32 @@ namespace Cle::Gfx
 		{
 			return Color;
 		}
-		void setColorMap(Cle::OPENGL::Texture _Tex)
+		void setColorMap(std::shared_ptr<ITexture> _Tex)
 		{
 			dirty = true;
 			colorMap = _Tex;
 		}
-		Cle::OPENGL::Texture getColorMap() const
+		std::shared_ptr<ITexture> getColorMap() const
 		{
 			return colorMap;
 		}
-
-		bool usesColorMap = true;
+		bool usesColorMap = false;
+		std::string savedColorMap;
+		std::string savedSpecularMap;
 		Cle::OPENGL::Shader m_Shader;
 		Material(Cle::OPENGL::Program Program) : m_Shader(Program.ID) {}
 		Material(GLuint Program) : m_Shader(Program) {}
 		Material() : m_Shader(0) {}
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(Color, colorMap);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(Color, colorMap);
+			dirty = true;
+		}
 	};
 }

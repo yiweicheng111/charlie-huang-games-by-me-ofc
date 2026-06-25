@@ -1,20 +1,27 @@
 #pragma once
 #include <vector>
-#include "GfxBase.h"
+#include "CharlieCore/Vertex.h"
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 #include "Components/Components.h"
 #include <string>
 #include "ITexture.h"
+#include <entt/entt.hpp>
+#include <cereal/cereal.hpp>
+#include <cereal/access.hpp>
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/archives/binary.hpp>
 namespace Cle::Gfx
 {
-
+	
 	class GenericMesh {
 	private:
 		std::vector<Cle::Gfx::Vertex> Vertices;
 		std::vector<unsigned int> Indices;
 	public:
+		
 		int loadedMeshIndex = 0;
 
 		GenericMesh() {};
@@ -74,15 +81,33 @@ namespace Cle::Gfx
 		}
 	};
 	struct IMesh {
+		virtual ~IMesh() = default;
+
+		bool gpuUploaded = false;
 		std::unordered_map<unsigned int, std::vector<unsigned int>> LODIndicesEBOMap;
+		GenericMesh gMesh;
 
-
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			std::string safeTexture{};
+			if (gMesh.texture) safeTexture = gMesh.texture->getPath();
+			ar(gMesh.ModelPath, gMesh.loadedMeshIndex, safeTexture);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			std::string savedpath;
+			ar(gMesh.ModelPath, gMesh.loadedMeshIndex, savedpath);
+			if (gMesh.texture) gMesh.texture->setPath(savedpath);
+		}
 		virtual void draw() = 0;
 	};
 	struct AssetManager {
+		std::unordered_map<std::string,std::vector<GenericMesh>> meshCache;
 		std::unordered_map<std::string, std::shared_ptr<ITexture>> textureCache;
 		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 parentTransform);
 		GenericMesh ProcessMesh(aiMesh* Mesh, const aiScene* scene, const glm::mat4& global);
-		std::vector<GenericMesh> LoadModel(std::string path);
+		std::vector<GenericMesh>& LoadModel(std::string path);
 	};
 }

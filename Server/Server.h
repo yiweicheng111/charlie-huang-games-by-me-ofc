@@ -1,7 +1,8 @@
 #pragma once
 #include "enet/enet.h"
-#include "packet.h"
-
+#include "entt/entt.hpp"
+#include "shared.h"
+#include "Components/Transform.h"
 namespace Cle
 {
 	class Server
@@ -9,6 +10,7 @@ namespace Cle
 	public:
 		ENetAddress address;
 		ENetHost* host;
+
 		entt::registry registry;
 		bool running = true;
 		~Server()
@@ -16,8 +18,8 @@ namespace Cle
 			enet_host_destroy(host);
 		}
 		Server(int port);
+		void loadGame(std::string path);
 		void Broadcast();
-		void BroadcastTransform(ENetPeer* peer, int networkID);
-		void BroadcastMesh(ENetPeer* peer, int networkID);
+		
 	};
 }

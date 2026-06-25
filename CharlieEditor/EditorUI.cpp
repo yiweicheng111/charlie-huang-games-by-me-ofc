@@ -2,6 +2,8 @@
 #include "Mesh.h"
 #include <filesystem>
 #include "imgui/misc/cpp/imgui_stdlib.h"
+#include "Audio/AudioEngine.h"
+#include "shared.h"
 using namespace Cle::Components;
 
 namespace Cle::Editor
@@ -37,7 +39,7 @@ namespace Cle::Editor
 			if (!m_registry->any_of<Name>(child)) {
 				m_registry->emplace<Name>(child, "Untitled Object");
 			}
-			std::string name = m_registry->get<Cle::Components::Name>(child).value;
+			std::string name = m_registry->get<Cle::Components::Name>(child).getName();
 			ImGui::PushID((int)child);
 			bool open = ImGui::TreeNode(name.c_str());
 			DrawContextMenu(child);
@@ -65,7 +67,7 @@ namespace Cle::Editor
 
 					if (m_Focused_Entity == e) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
 					else ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8, 0.8, 0.8, 1.0));
-					bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).value.c_str(),ImGuiTreeNodeFlags_Framed);
+					bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).getName().c_str(), ImGuiTreeNodeFlags_Framed);
 
 					DrawContextMenu(e);
 					if (open && ImGui::IsItemToggledOpen())
@@ -94,20 +96,45 @@ namespace Cle::Editor
 			return;
 		}
 		ImGui::Begin("Properties");
-
 		Transform* transform =	m_registry->try_get<Transform>(m_Focused_Entity);
 		LightComponent* lightComponent = m_registry->try_get<LightComponent>(m_Focused_Entity);
 		Cle::Gfx::Material* material = m_registry->try_get<Cle::Gfx::Material>(m_Focused_Entity);
-		Cle::Gfx::GenericMesh* mesh = m_registry->try_get<Cle::Gfx::GenericMesh>(m_Focused_Entity);
-
+		auto mesh = m_registry->try_get<std::shared_ptr<Cle::Gfx::IMesh>>(m_Focused_Entity);
+		std::shared_ptr<Cle::Audio::Sound>* soundptr = m_registry->try_get<std::shared_ptr<Cle::Audio::Sound>>(m_Focused_Entity);
+		
 		Cle::Components::CubeMapTexture* cubeMap = m_registry->try_get<Cle::Components::CubeMapTexture>(m_Focused_Entity);
+		if (soundptr)
+		{
+			auto sound = *soundptr;
+			if (ImGui::TreeNodeEx("Sound", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				std::string soundPath = sound->getPath();
+				float timePosition = sound->getTimePosition();
+				bool playing = sound->isPlaying();
+				ImGui::DragFloat("Volume", &sound->volume);
+				if (ImGui::InputText("Path", &soundPath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
+					sound->setPath(soundPath);
+				}
+				if (ImGui::DragFloat("Time position", &timePosition) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
+					sound->setTimePosition(timePosition);
+				}
+				if (ImGui::Checkbox("Playing", &playing))
+				{
+					if (!playing) sound->Pause();
+					else sound->Play();
+				}
+				ImGui::TreePop();
 
+			}
+		}
 		if (transform)
 		{
 			if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				auto pos = transform->getPosition();
-				auto orien = transform->getOrientation();
+				auto orien = glm::eulerAngles(transform->getOrientation());
 				auto scale = transform->getScale();
 				if (ImGui::DragFloat3("Position", (float*)&pos))
 				{
@@ -116,12 +143,12 @@ namespace Cle::Editor
 				}
 				if (ImGui::DragFloat3("Orientation", (float*)&orien))
 				{
-					transform->setScale(scale);
+					transform->setOrientation(glm::quat(orien));
 
 				}
 				if (ImGui::DragFloat3("Scale", (float*)&scale))
 				{
-					transform->setOrientation(orien);
+					transform->setScale(scale);
 
 				}				
 
@@ -168,14 +195,21 @@ namespace Cle::Editor
 		{
 			if (ImGui::TreeNodeEx("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				std::string path;
-				if (!mesh->texture)
+				std::string texturePath;
+				std::string modelPath;
+				auto& gmesh = mesh->get()->gMesh;
+				texturePath = gmesh.texture ? gmesh.texture->getPath()  : "null";
+				modelPath = gmesh.ModelPath;
+
+				if (ImGui::InputText("Texture path", &texturePath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					path = "";
-					if (ImGui::InputText("Path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+					if (!gmesh.texture || !gmesh.texture->loaded)
 					{
-						mesh->texture->setPath(path);
+						gmesh.texture = World->renderer.createTexture(texturePath);
 					}
+				}
+				if (ImGui::InputText("Model path", &texturePath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
 				}
 			
 				
@@ -235,8 +269,8 @@ namespace Cle::Editor
 		}
 		Cle::Components::Transform* transform = m_registry->try_get<Cle::Components::Transform>(entity);
 		if (!transform) return;
-		if (!m_registry->any_of<Cle::Gfx::GenericMesh>(entity)) return;
-		Cle::Gfx::GenericMesh mesh = m_registry->get<Cle::Gfx::GenericMesh>(entity);
+		if (!m_registry->any_of<std::shared_ptr<Cle::Gfx::IMesh>>(entity)) return;
+		auto& mesh = m_registry->get<std::shared_ptr<Cle::Gfx::IMesh>>(entity)->gMesh;
 		ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());
 		int width, height;
 		glfwGetWindowSize(m_window, &width, &height);

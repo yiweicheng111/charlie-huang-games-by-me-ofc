@@ -5,15 +5,15 @@
 using namespace Cle::Gfx;
 using namespace Cle::Components;
 void Cle::Editor::EditorApplication::updateAABBS() {
-	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	for (auto ent : registry.view<GenericMesh>()) {
+	static auto frustum = Frustum::createFrustumInCamera(m_camera);
+	for (auto ent : registry.view<std::shared_ptr<IMesh>>()) {
 		if (registry.any_of<Transform>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			GenericMesh& m = registry.get<GenericMesh>(ent);
+			auto& m = registry.get<std::shared_ptr<IMesh>>(ent)->gMesh;
 			glm::mat4 model = t.model;
-			auto& aabb = registry.get<GenericMesh>(ent).m_AABB;
+			auto& aabb = m.m_AABB;
 			if (aabb.dirty) {
-				aabb = registry.get<GenericMesh>(ent).m_local_AABB;
+				aabb = m.m_local_AABB;
 				aabb.max *= t.getScale();
 				aabb.min *= t.getScale();
 				aabb.Translate(t.getPosition());
@@ -24,58 +24,22 @@ void Cle::Editor::EditorApplication::updateAABBS() {
 }
 
 void Cle::Editor::EditorApplication::updateBoundingSpheres() {
-	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	for (auto ent : registry.view<GenericMesh>()) {
+	static auto frustum = Frustum::createFrustumInCamera(m_camera);
+	for (auto ent : registry.view<std::shared_ptr<IMesh>>()) {
 		if (registry.any_of<Transform>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			GenericMesh& m = registry.get<GenericMesh>(ent);
+			auto& m = registry.get<std::shared_ptr<IMesh>>(ent)->gMesh;
 			glm::mat4 model = t.model;
-			registry.get<GenericMesh>(ent).m_Bounding_Sphere.updateToWorld(m.getVertices(), model);
+			m.m_Bounding_Sphere.updateToWorld(m.getVertices(), model);
 		}
 	}
 }
-void Cle::Editor::EditorApplication::connectServer(int port,std::string ip)
-{
-	ENetAddress address;
-	ENetPeer* peer;
-	
-	client = enet_host_create(NULL, 1, 2, 0, 0);
-	if (!client)
-	{
-		std::cout << "cant create client\n";
-		return;
-	}
-	enet_address_set_host(&address, ip.c_str());
-	address.port = port;
-	peer = enet_host_connect(client, &address, 2, 1);
-	if (!peer)
-	{
-		std::cout << "server full\n";
-		enet_host_destroy(client);
-		return;
-	}
-	
-	ENetEvent event;
-	if (enet_host_service(client, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
-	{
-		std::cout << "connected sucess\n";
-	}
-	else
-	{
-		std::cout << "connection timed out\n";
-	}
-}
 
-void Cle::Editor::EditorApplication::listenServer()
-{
-	if (!client) return;
-	ENetEvent* event;
 
-}
 
 Cle::Editor::EditorApplication::~EditorApplication()
 {
-	if (client) enet_host_destroy(client);
+	if (m_network.client) enet_host_destroy(m_network.client);
 	glfwTerminate();
 }
 Cle::Editor::EditorApplication::EditorApplication()
@@ -83,7 +47,7 @@ Cle::Editor::EditorApplication::EditorApplication()
 	enet_initialize();
 	ma_engine_init(nullptr, &audio_engine);
 	renderer = Renderer::IRenderer::Create(&registry);
-	window = glfwCreateWindow(800, 800, "t", NULL, NULL);
+	window = glfwCreateWindow(800, 800, "CHARLIE ZI", NULL, NULL);
 	assert(window != NULL);
 	glfwMakeContextCurrent(window);
 	gladLoadGL();
@@ -92,11 +56,8 @@ Cle::Editor::EditorApplication::EditorApplication()
 			glViewport(0, 0, width, height);
 		});
 	renderer->setSettings();
-	World = Cle::World(&registry, renderer);
-	World.deleteObjectCallback = [&]()
-		{
-			m_UIHandler.m_Focused_Entity = entt::null;
-		};
+	World = std::make_unique<Cle::World>(&registry, *renderer);
+
 	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	m_camera = Camera(glm::radians(70.0f), 1);
 /*
@@ -105,30 +66,50 @@ Cle::Editor::EditorApplication::EditorApplication()
 //	m_Controller = Cle::ObjectCameraController(&m_camera, window, &registry,player);
 	m_Controller = Cle::Editor::FreeCameraControl(&m_camera, window);
 
-	m_UIHandler = Cle::Editor::EditorUI(&World, window, &m_camera);
-
+	m_UIHandler = Cle::Editor::EditorUI(World.get(), window, &m_camera);
+	World->deleteObjectCallback = [&]()
+		{
+			m_UIHandler.m_Focused_Entity = entt::null;
+		};
 }
 
 
 
 void Cle::Editor::EditorApplication::runHotKey()
 {
+	if (m_UIHandler.io->WantCaptureKeyboard) return;
 	bool saveKey = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
 	bool loadKey = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS;
+
 	if (saveKey)
 	{
-		World.Snapshot("world.bin");
+		std::cout << "saved\n";
+		Cle::gameIO::getInstance().setRegistry(&registry);
+	//	Cle::gameIO::getInstance().setRenderer(renderer.get());
+
+		Cle::gameIO::getInstance().Snapshot("world.bin");
 	}
+	mapLoading = true;
 	if (loadKey)
 	{
-		World.LoadFile("world.bin");
+
+		Cle::gameIO::getInstance().setRegistry(&registry);
+		//Cle::gameIO::getInstance().setRenderer(renderer.get());
+		Cle::gameIO::getInstance().LoadFile("world.bin");
+		renderer->onSceneLoaded();
 	}
+	mapLoading = false;
+
 	if (m_UIHandler.m_Focused_Entity == entt::null) return;
-	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS){
-		World.CopyObject(m_UIHandler.m_Focused_Entity);
+	static bool copykeypresslastframe = false;
+	bool copykeypress = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
+	if (copykeypress && !copykeypresslastframe){
+		World->CopyObject(m_UIHandler.m_Focused_Entity); copykeypresslastframe = true;
 	}
+	copykeypresslastframe = copykeypress;
+	
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-		World.DestroyObject(m_UIHandler.m_Focused_Entity);
+		World->DestroyObject(m_UIHandler.m_Focused_Entity);
 	}
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && m_UIHandler.m_Focused_Entity != entt::null) {
 		m_camera.Position = registry.get<Transform>(m_UIHandler.m_Focused_Entity).getPosition();
@@ -150,8 +131,8 @@ void Cle::Editor::EditorApplication::runPointer()
 	ray.SetFromPointer(pX, pY, winWidth, winHeight, m_camera);
 	float nearestD = (std::numeric_limits<float>::max)();
 	entt::entity nearestEnt = entt::null;
-	for (auto& ent : registry.view<GenericMesh>()) {
-		AABB aabb = registry.get<GenericMesh>(ent).m_AABB;
+	for (auto& ent : registry.view<std::shared_ptr<IMesh>>()) {
+		AABB aabb = registry.get<std::shared_ptr<IMesh>>(ent)->gMesh.m_AABB;
 		float distance = aabb.intersects(ray);
 		if (distance == -1) continue;
 		if (distance >= nearestD) continue;
@@ -182,23 +163,24 @@ void Cle::Editor::EditorApplication::Run()
 		Render();
 		Update(0.1f);
 		renderer->clearFrame(window);
+		m_network.poll();
 	}
 }
 void Cle::Editor::EditorApplication::AudioPass() {
-	for (auto e : registry.view<Cle::Audio::Sound>()) {
-		auto& sound = registry.get<Cle::Audio::Sound>(e);
-		if (registry.all_of<Cle::Components::Transform>(e) && !sound.global) {
+	for (auto e : registry.view<std::shared_ptr<Cle::Audio::Sound>>()) {
+		auto& sound = registry.get<std::shared_ptr<Cle::Audio::Sound>>(e);
+		if (registry.any_of<Cle::Components::Transform>(e) && !sound->global) {
 			glm::vec3 position = registry.get<Cle::Components::Transform>(e).getPosition();
 
-			sound.position = position;
-			sound.UpdateVolume(m_camera.Position);
+			sound->position = position;
+			sound->UpdateVolume(m_camera.Position);
 			continue;
 		}
 	}
 }
 void Cle::Editor::EditorApplication::Render()
 {
-	if (World.worldLoading) return;
+	if (World->worldLoading) return;
 	renderer->lightingPass();
 	//renderer->SyncMeshes(registry);
 	int width, height;
@@ -208,17 +190,15 @@ void Cle::Editor::EditorApplication::Render()
 	int totalMeshes = 0;
 	int totalDrawn = 0;
 	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	auto view = registry.view<GenericMesh,Transform, Cle::Gfx::Material>();
-
-	view.each([&](auto entity, GenericMesh& mesh, Transform& transform, Material& material)
+	auto view = registry.view<std::shared_ptr<IMesh>,Transform, Cle::Gfx::Material>();
+	view.each([&](auto entity, std::shared_ptr<IMesh>& mesh, Transform& transform, Material& material)
 		{
-			if (World.worldLoading) return;
+			if (World->worldLoading) return;
 
 			renderer->UniformCamMatrix(m_camera, material);
 			//totalMeshes++;
-		 if (mesh.m_Bounding_Sphere.isOnFrustum(frustum, transform.model)) {
-
-				if (!World.worldLoading) renderer->drawMesh(entity, registry,m_camera);
+		 if (mesh->gMesh.m_Bounding_Sphere.isOnFrustum(frustum, transform.model) && !mapLoading) {
+				renderer->drawMesh(entity, registry,m_camera);
 				//totalDrawn++;
 			}
 		});

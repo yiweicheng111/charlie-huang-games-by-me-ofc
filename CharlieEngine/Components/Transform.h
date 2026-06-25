@@ -1,5 +1,4 @@
 #pragma once
-#include "GfxBase.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
@@ -25,6 +24,28 @@ namespace Cle::Components
 		void setOrientation(glm::quat _rot) { orientation = _rot;  dirty = true; }
 
 		bool dirty = false;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			auto pos = getPosition();
+			auto oren = glm::eulerAngles(getOrientation());
+			auto scale = getScale();
+			ar(pos.x, pos.y, pos.z);
+			ar(oren.x, oren.y, oren.z);
+			ar(scale.x, scale.y, scale.z);
+		}
+		template <class Archive>
+		void load(Archive& ar) 
+		{
+			glm::vec3 pos, oren, scale;
+			ar(pos.x, pos.y, pos.z);
+			ar(oren.x, oren.y, oren.z);
+			ar(scale.x, scale.y, scale.z);
+			setPosition(pos);
+			setOrientation(glm::quat(oren));
+			setScale(scale);
+			dirty = true;
 
+		}
 	};
 }

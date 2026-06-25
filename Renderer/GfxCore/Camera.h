@@ -1,5 +1,13 @@
 #pragma once
-#include "GfxBase.h"
+#include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+#ifdef near
+#undef near
+#endif
+#ifdef far
+#undef far
+#endif
+
 namespace Cle::Gfx
 {
 	class Camera
@@ -10,7 +18,7 @@ namespace Cle::Gfx
 		float yaw = -glm::pi<float>() / 2;
 		float fov{};
 		float aspect{};
-		float far = 10000.0f;
+		float far = 5000.0f;
 		float near = 0.1f;
 		Camera() : fov(glm::radians(70.0f)), aspect(1) {}
 		Camera(float fov, float aspect);

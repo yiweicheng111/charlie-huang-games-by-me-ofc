@@ -8,24 +8,22 @@
 #include "Audio/AudioEngine.h"
 #include "World.h"
 #include "enet/enet.h"
+#include "Network.h"
+#include "gameIO.h"
+
 namespace Cle::Core
 {
 	class Application
 	{
 	public:
-		ENetHost* client;
-		ENetPeer* server;
-
-
+		Network m_network;
 		Cle::Scripting::ScriptHandler* m_ScriptHandler;
 		Cle::Gfx::Camera m_camera;
 		entt::registry registry;
 		GLFWwindow* window;
 		ma_engine audio_engine;
-		Cle::World World;
-		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
-		virtual void connectServer(int port, std::string ip) = 0;
-		virtual void listenServer() = 0;
+		std::unique_ptr<Cle::World> World;
+		std::unique_ptr<Cle::Renderer::IRenderer> renderer;
 		virtual void Run() = 0;
 		virtual void AudioPass() = 0;
 		virtual void Render() = 0;

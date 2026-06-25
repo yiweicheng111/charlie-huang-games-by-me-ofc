@@ -15,14 +15,18 @@ file(GLOB_RECURSE EngineFiles
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/Audio/AudioEngine.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/World.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/Physics.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/gameIO.h"
+
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/ObjectController.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/CameraController.h"
-
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/Network.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/Network.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/Physics.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/World.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/ReleaseApp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/Application.h"
-     "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/ReleaseApp.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/ReleaseApp.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CharlieCore/IO.cpp"
     "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
     "${PROJECT_SOURCE_DIR}/Library/vendor/miniaudio/*.c"
 )
@@ -35,6 +39,7 @@ target_include_directories(CharlieEngine PUBLIC
     "${PROJECT_SOURCE_DIR}/Renderer/GfxBase"
     "${PROJECT_SOURCE_DIR}/Renderer/GfxRenderer"
     "${PROJECT_SOURCE_DIR}/CharlieEngine"
+	"${PROJECT_SOURCE_DIR}/Renderer"
 )
 
 

@@ -11,11 +11,21 @@ namespace Cle::Gfx
 		virtual int getID() const = 0;
 		virtual void bind(unsigned int slot) const = 0;
 		bool loaded = false;
+		bool gpuUploaded = false;
 		std::string getPath() const
 		{
 			return path;
 		}
 		virtual void setPath(std::string newPath) = 0;
-	
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(path);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(path);
+		}
 	};
 }

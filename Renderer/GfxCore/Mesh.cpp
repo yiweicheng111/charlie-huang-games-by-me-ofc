@@ -2,17 +2,14 @@
 #include <iostream>
 #include <filesystem>
 #include "OpenGL4/OpenGLMesh.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 using namespace Cle::Gfx;
 static glm::mat4 toGlm(aiMatrix4x4 mat)
 {
-	return glm::mat4(
-		mat.a1, mat.b1, mat.c1, mat.d1,
-		mat.a2, mat.b2, mat.c2, mat.d2,
-		mat.a3, mat.b3, mat.c3, mat.d3,
-		mat.a4, mat.b4, mat.c4, mat.d4
-	);
+	return glm::transpose(glm::make_mat4(&mat.a1));
 }
-std::vector<GenericMesh> AssetManager::ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 pTransform)
+std::vector<GenericMesh>AssetManager::ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 pTransform)
 {
 
 	std::vector<GenericMesh> meshes;
@@ -23,7 +20,6 @@ std::vector<GenericMesh> AssetManager::ProcessNode(aiNode* node, const aiScene* 
 	{
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 		GenericMesh gMesh = ProcessMesh(mesh, scene,global);
-		gMesh.loadedMeshIndex = node->mMeshes[i];
 		meshes.push_back(gMesh);
 	}
 	for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -40,8 +36,8 @@ GenericMesh AssetManager::ProcessMesh(aiMesh* Mesh, const aiScene* scene, const 
 	std::vector<unsigned int> indices;
 	indices.reserve(Mesh->mNumFaces*3);
 
-	glm::vec3 max = glm::vec3(Mesh->mVertices[0].x, Mesh->mVertices[0].y, Mesh->mVertices[0].z);
-	glm::vec3 min = glm::vec3(Mesh->mVertices[0].x, Mesh->mVertices[0].y, Mesh->mVertices[0].z);
+	glm::vec3 max = glm::vec3(global * glm::vec4(Mesh->mVertices[0].x, Mesh->mVertices[0].y, Mesh->mVertices[0].z,1.0f));
+	glm::vec3 min = max;
 	for (unsigned int i = 0; i < Mesh->mNumVertices; i++) {
 		Vertex v{};
 
@@ -93,27 +89,32 @@ GenericMesh AssetManager::ProcessMesh(aiMesh* Mesh, const aiScene* scene, const 
 	}
 	return loadedMesh;
 }
-std::vector<GenericMesh> AssetManager::LoadModel(std::string path)
+std::vector<GenericMesh>& AssetManager::LoadModel(std::string path)
 {
-	
 	if (!std::filesystem::exists(path)) {
-		std::cerr << path << " does not exist\n"; return{};
+		meshCache[path] = {};
+		std::cerr << path << " does not exist\n"; //return meshCache[path];
+		return meshCache[path];
 	};
+	if (meshCache.contains(path))
+	{
+		return meshCache[path];
+	}
+
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(
 		path,
-		aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenUVCoords | aiProcess_GenUVCoords
+		aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenUVCoords | aiProcess_GenUVCoords 
 	);
 
-	std::vector<GenericMesh> Meshes = ProcessNode(scene->mRootNode, scene, aiMatrix4x4(
-		1,0,0,0,
-		0,1,0,0,
-		0,0,1,0,
-		0,0,0,1
-	));
+	std::vector<GenericMesh> Meshes = ProcessNode(scene->mRootNode, scene, aiMatrix4x4());
+	int i = 0;
 	for (auto& Mesh : Meshes)
 	{
 		Mesh.ModelPath = path;
+		Mesh.loadedMeshIndex = i;
+		i++;
 	}
-	return Meshes;
+	meshCache[path] = Meshes;
+	return meshCache[path];
 }

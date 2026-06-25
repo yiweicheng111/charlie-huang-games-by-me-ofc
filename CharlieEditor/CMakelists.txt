@@ -5,7 +5,7 @@ file(GLOB_RECURSE SourceFiles
     "${PROJECT_SOURCE_DIR}/Library/vendor/imgui/*.cpp"
     "${PROJECT_SOURCE_DIR}/Library/vendor/imguizmo/*.cpp"
     "${PROJECT_SOURCE_DIR}/Library/vendor/imgui/misc/freetype/*.cpp"
-	"./*.h"
+	"./*.h"                   
 )	
 add_library(CharlieEditor STATIC ${SourceFiles})
 target_include_directories(CharlieEditor PUBLIC
@@ -20,8 +20,9 @@ target_include_directories(CharlieEditor PUBLIC
     "${PROJECT_SOURCE_DIR}/CharlieEngine"
     "${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore"
     "${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore/Components"
-    	"${PROJECT_SOURCE_DIR}/Library/vendor/enet/include"
-
+    "${PROJECT_SOURCE_DIR}/Library/vendor/enet/include"
+     "${PROJECT_SOURCE_DIR}/Renderer"
+   	
 )
 target_link_libraries(
 	CharlieEditor PUBLIC

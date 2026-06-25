@@ -7,6 +7,9 @@ using namespace Cle::Gfx;
 
 void Cle::OPENGL::Mesh::draw()
 {
+	glBindVertexArray(m_VAO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+
 	if (indexCount == 0) {
 		glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 	}

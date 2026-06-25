@@ -10,20 +10,18 @@ namespace Cle::Editor
 	class EditorApplication : public  Cle::Core::Application
 	{
 	public:
+		bool mapLoading = false;
 		entt::entity player;
 		Cle::Scripting::ScriptHandler m_ScriptHandler;
 	    Cle::Editor::FreeCameraControl m_Controller;
 		//Cle::ObjectCameraController m_Controller;
 		Cle::Editor::EditorUI m_UIHandler;
-		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
 		~EditorApplication();
 		EditorApplication();
 	
 		virtual void AudioPass() override;
 		void updateAABBS();
 		virtual void updateBoundingSpheres() override;
-		virtual void connectServer(int port, std::string ip) override;
-		virtual void listenServer() override;
 
 
 		void runHotKey();

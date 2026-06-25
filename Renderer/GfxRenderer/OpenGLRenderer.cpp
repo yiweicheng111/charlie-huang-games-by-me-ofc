@@ -8,12 +8,17 @@
 #define materialColorMap 0
 #define meshColorMap 1
 #define lightMap 2
+#define skyboxSlot 
 
 
 void Cle::OPENGL::Renderer::beginFrame()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glfwPollEvents();
+	auto& lighting = Lighting::getInstance();
+	
+
+	glClearColor(lighting.backgroundColor.x, lighting.backgroundColor.y, lighting.backgroundColor.z, 1.0f);
 }
 void Cle::OPENGL::Renderer::lightPass()
 {
@@ -33,7 +38,7 @@ void Cle::OPENGL::Renderer::lightPass()
 		
 	}
 	glActiveTexture(GL_TEXTURE0+ lightMap);
-	glBindTexture(GL_TEXTURE_2D, buffer.lightTexture);
+	//glBindTexture(GL_TEXTURE_2D, buffer.lightTexture);
 	glUniform1i(glGetUniformLocation(buffer.m_Program, "lightTexture"), lightMap);
 
 }
@@ -57,10 +62,13 @@ void Cle::OPENGL::Renderer::clearColor(float r, float g, float b, float w)
 {
 	glClearColor(r, g, b, w);
 }
-void Cle::OPENGL::Renderer::uploadMesh(entt::entity e, entt::registry& registry)
+void Cle::OPENGL::Renderer::uploadMesh(entt::entity e,const Cle::Gfx::GenericMesh& mesh, entt::registry& registry)
 {
-	Cle::Gfx::GenericMesh mesh = registry.get<Cle::Gfx::GenericMesh>(e);
-	registry.emplace<std::shared_ptr<Cle::OPENGL::Mesh>>(e, std::make_shared<Cle::OPENGL::Mesh>(mesh));
+
+	std::shared_ptr<Cle::Gfx::IMesh> imesh = std::make_shared< Cle::OPENGL::Mesh>(mesh);
+	imesh->gpuUploaded = true;
+
+	registry.emplace_or_replace<std::shared_ptr<Cle::Gfx::IMesh>>(e, imesh);
 }
 static void onlightadded(entt::registry& registry,entt::entity e)
 {	
@@ -80,8 +88,11 @@ void Cle::OPENGL::Renderer::setSettings()
 {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glfwSwapInterval(1);
 	[&] {
-		std::vector<std::string> shaders = {"Shaders/light.frag","Shaders/default.frag"};
+		std::vector<std::string> shaders = {"Shaders/light.frag","Shaders/fog.frag","Shaders/default.frag"};
 		Cle::OPENGL::Program program("Shaders/default.vert", shaders);
 		programMap["MeshShader"] = program.ID;
 		}();
@@ -104,16 +115,22 @@ void Cle::OPENGL::Renderer::lightingPass()
 	auto& instance = Lighting::getInstance();
 	auto& sunDir = instance.sunDirection;
 	float ambient = instance.ambient;
+	auto& backgroundColor = instance.backgroundColor;
+	auto& ambientColor = instance.ambientColor;
 
 	glUseProgram(pID);
 	glUniform3fv(glGetUniformLocation(pID, "sunDirection"),1,glm::value_ptr(sunDir));
 	glUniform1f(glGetUniformLocation(pID, "ambientAmount"), ambient);
-
+	glUniform3f(glGetUniformLocation(pID, "ambientColor"), ambientColor.x, ambientColor.y, ambientColor.z);
+	glUniform1f(glGetUniformLocation(pID, "fogStart"), instance.fogStart);
+	glUniform1f(glGetUniformLocation(pID, "fogEnd"), instance.fogEnd);
+	glUniform3f(glGetUniformLocation(pID, "backgroundColor"), backgroundColor.x, backgroundColor.y, backgroundColor.z);
 }
 
 
 void Cle::OPENGL::Renderer::cleanDirtyMesh(entt::entity entity)
 {
+
 	if (!m_registry->any_of< Cle::Gfx::GenericMesh>(entity) || !m_registry->get<std::shared_ptr<Cle::OPENGL::Mesh>>(entity)) return;
 	Cle::Gfx::GenericMesh& gmesh = m_registry->get< Cle::Gfx::GenericMesh>(entity);
 
@@ -136,28 +153,83 @@ void Cle::OPENGL::Renderer::cleanDirtyMesh(entt::entity entity)
 		
 }
 
+void Cle::OPENGL::Renderer::onSceneLoaded()
+{
+	auto view = m_registry->view<std::shared_ptr<Cle::Gfx::IMesh>, Cle::Gfx::Material, Cle::Components::Transform>();
+	Cle::Gfx::Camera cam;
+
+	view.each([&](const entt::entity entity, std::shared_ptr<Cle::Gfx::IMesh>& mesh, Cle::Gfx::Material& material, Cle::Components::Transform& transform)
+		{
+
+				material.m_Shader = getDefaultShader();
+
+				const auto& ModelLoaded =m_AssetHandler.LoadModel(mesh->gMesh.ModelPath);
+
+				uploadMesh(entity, ModelLoaded.at(mesh->gMesh.loadedMeshIndex), *m_registry);
+				auto& nMesh = m_registry->get<std::shared_ptr<Cle::Gfx::IMesh>>(entity);
+
+
+				if (nMesh->gMesh.texture) nMesh->gMesh.texture = createTexture(nMesh->gMesh.texture->getPath());
+				if (material.getColorMap()) material.setColorMap(createTexture(material.getColorMap()->getPath()));
+				drawMesh(entity, *m_registry,cam);
+
+
+		});
+}
+
 int Cle::OPENGL::Renderer::assignLOD(entt::entity entity, glm::vec3 viewPosition)
 {
-	auto& mesh = m_registry->get<std::shared_ptr<Cle::OPENGL::Mesh>>(entity);
+	auto& imesh = m_registry->get<std::shared_ptr<Cle::Gfx::IMesh>>(entity);
+	std::shared_ptr<Cle::OPENGL::Mesh> openglmesh = dynamic_pointer_cast<Cle::OPENGL::Mesh>(imesh);
 	float distance = glm::length(viewPosition - m_registry->get<Cle::Components::Transform>(entity).getPosition());
-	int lodsmesh = mesh->LODIndicesEBOMap.size();
-	return mesh->m_EBO;
+	int lodsmesh = imesh->LODIndicesEBOMap.size();
+	return openglmesh->m_EBO;
+
 	if (lodsmesh < 3)
 	{
-		return mesh->m_EBO;
+		return openglmesh->m_EBO;
 	}
-	if (distance < 30) return mesh->m_EBO;
-	if (distance < 70) return  std::next(mesh->LODIndicesEBOMap.begin())->first;
-	else return  std::next(std::next(mesh->LODIndicesEBOMap.begin()))->first;
+	if (distance < 30) return  openglmesh->m_EBO;
+	if (distance < 70) return  std::next(openglmesh->LODIndicesEBOMap.begin())->first;
+	else return  std::next(std::next(openglmesh->LODIndicesEBOMap.begin()))->first;
 
+}
+
+std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::phraseSkybox(std::vector<std::string> skybox)
+{
+	unsigned int cubetex;
+	glGenTextures(1, &cubetex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubetex);
+
+	for (int i = 0; i < 6; i++)
+	{
+		int width, height, channels;
+		unsigned char* bytes = stbi_load(skybox[i].c_str(), &width, &height, &channels, 0);
+		auto format = channels == 3 ? GL_RGB : GL_RGBA;
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format,GL_UNSIGNED_BYTE, bytes);
+		stbi_image_free(bytes);
+	}
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	return std::make_shared<Cle::OPENGL::Texture>(cubetex);
 }
 
 std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::createTexture(std::string path)
 {
+
 	if (m_AssetHandler.textureCache.contains(path))
 	{
+		if (m_AssetHandler.textureCache[path]->loaded == false) return nullptr;
+		m_AssetHandler.textureCache[path]->gpuUploaded = true;
+
 		return m_AssetHandler.textureCache[path];
 	}
+	m_AssetHandler.textureCache[path]->gpuUploaded = true;
 
 	m_AssetHandler.textureCache[path] = std::make_shared<Cle::OPENGL::Texture>(path);
 	return m_AssetHandler.textureCache[path];
@@ -166,13 +238,17 @@ std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::createTexture(std::st
 
 void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera)
 {
-	if (!registry.all_of<Cle::Gfx::Material, Cle::Components::Transform, std::shared_ptr<Cle::OPENGL::Mesh>>(e)) {
+
+	if (!registry.all_of<Cle::Gfx::Material, Cle::Components::Transform, std::shared_ptr<Cle::Gfx::IMesh>>(e)) {
 		 return;		
 	}
 	cleanDirtyMesh(e);
+
+
 	auto& material = registry.get<Cle::Gfx::Material>(e);
-	auto& mesh = registry.get<std::shared_ptr<Cle::OPENGL::Mesh>>(e);
-	auto& gmesh = registry.get<Cle::Gfx::GenericMesh>(e);
+
+	auto& mesh = registry.get<std::shared_ptr<Cle::Gfx::IMesh>>(e);
+	auto& gmesh = mesh->gMesh;
 
 	auto& transform = registry.get<Cle::Components::Transform>(e);
 
@@ -182,9 +258,7 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 		gmesh.m_AABB.dirty = true;
 	}
 
-
 	glUseProgram(material.m_Shader.programID);
-	glBindVertexArray(mesh->m_VAO);
 	material.m_Shader.setVec3("color", material.getColor());
 
 	if (material.dirty)
@@ -208,12 +282,12 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 	lightPass();
 
 	
-	if (gmesh.texture && gmesh.texture->getID() !=-1) {
-		glActiveTexture(GL_TEXTURE0+meshColorMap);
+	if (gmesh.texture) {
+		glActiveTexture(GL_TEXTURE0 + meshColorMap);
 
-		glBindTexture(GL_TEXTURE_2D, gmesh.texture->getID());
 		material.m_Shader.setInt("usesMeshColorMap", (int)(true));
 		material.m_Shader.setInt("meshColorMap", meshColorMap);
+
 	}
 	else {
 		material.m_Shader.setInt("usesMeshColorMap", (int)(false));
@@ -222,19 +296,26 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 	if (material.usesColorMap) {
 
 		glActiveTexture(GL_TEXTURE0 + materialColorMap);
-		glBindTexture(GL_TEXTURE_2D, material.getColorMap().getID());
+		glBindTexture(GL_TEXTURE_2D, material.getColorMap()->getID());
 		material.m_Shader.setInt("usesMaterialColorMap", (int)(true));
 		material.m_Shader.setInt("materialColorMap", materialColorMap);
 	}
 	else {
 		material.m_Shader.setInt("usesMaterialColorMap", (int)(false));
 	}
+
 	GLuint nebo = assignLOD(e, camera.Position);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, nebo);
+
 	mesh->draw();
 }
 
 void Cle::OPENGL::Renderer::clear()
 {
 	programMap.clear();
+}
+
+void Cle::OPENGL::Renderer::passSkybox()
+{
+	glDepthFunc(GL_LEQUAL);
+	glDepthFunc(GL_LESS);
 }

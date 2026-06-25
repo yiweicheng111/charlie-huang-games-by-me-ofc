@@ -16,6 +16,7 @@ namespace Cle::OPENGL
 			glDeleteTextures(1, &ID);
 		}
 		Texture(std::string path);
+		Texture(std::string path,GLenum target);
 		Texture() = default;
 		Texture(unsigned int ID) : ID(ID) {}
 		virtual void bind(unsigned int slot) const override {
@@ -40,6 +41,23 @@ namespace Cle::OPENGL
 			if (channels == 1) format = GL_RED;
 			if (channels == 4) format = GL_RGBA;
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, format, GL_TEXTURE_2D, data);
+			loaded = true;
+		}
+		virtual void setPath(std::string nPath,GLenum target) 
+		{
+			path = nPath;
+			glBindTexture(target, ID);
+			int width, height, channels;
+			unsigned char* data = stbi_load(nPath.c_str(), &width, &height, &channels, 0);
+			if (!data) {
+				loaded = false;
+				std::cerr << "image " << path << " not loaded\n";
+				return;
+			}
+			GLenum format = GL_RGB;
+			if (channels == 1) format = GL_RED;
+			if (channels == 4) format = GL_RGBA;
+			glTexSubImage2D(target, 0, 0, 0, width, height, format, target, data);
 			loaded = true;
 		}
 	};

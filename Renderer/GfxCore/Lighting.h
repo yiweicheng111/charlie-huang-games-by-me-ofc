@@ -14,8 +14,6 @@ namespace Cle
 		Lighting(Lighting&&) = delete;
 		Lighting& operator=(Lighting&&) = delete;
 
-
-
 		static Lighting& getInstance()
 		{
 			static Lighting instance{};
@@ -23,9 +21,10 @@ namespace Cle
 		}
 
 		float fogStart = 1.0f;
-		float fogEnd = 1e5;
+		float fogEnd = 1e6;
 		float ambient = 0.5f;
-
+		glm::vec3 ambientColor = glm::vec3(1.0f);
+		glm::vec3 backgroundColor = glm::vec3(0.5f, 0.5f, 0.9f);
 		glm::vec3 sunDirection{1,-1.0,0.3 };
 		Cle::Components::CubeMapTexture skybox;
 

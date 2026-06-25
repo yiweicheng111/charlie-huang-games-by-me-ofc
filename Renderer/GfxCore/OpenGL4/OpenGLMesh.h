@@ -8,19 +8,18 @@
 #include "GfxBase.h"
 #include "meshoptimizer/src/meshoptimizer.h"
 #include <iostream>
+#include <cereal/types/polymorphic.hpp>
+
 namespace Cle::OPENGL 
 {
 	
 	struct Mesh : Cle::Gfx::IMesh
 	{
-	
 
 		int indexCount, vertexCount = 0;
 		unsigned int m_VAO{}, m_VBO{}, m_EBO{};
 
-
 		virtual void draw() override;
-
 
 		Mesh() {}
 		~Mesh() {
@@ -39,6 +38,7 @@ namespace Cle::OPENGL
 		}
 		Mesh(Cle::Gfx::GenericMesh g_Mesh)
 		{
+			gMesh = g_Mesh;
 			auto& indices = g_Mesh.getIndices();
 			auto& vertices = g_Mesh.getVertices();
 			indexCount = indices.size();
@@ -74,9 +74,21 @@ namespace Cle::OPENGL
 
 			}
 		}
-		
+
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(cereal::base_class<Cle::Gfx::IMesh>(this));
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(cereal::base_class<Cle::Gfx::IMesh>(this));
+		}
 
 		
 	};
 	
 }
+CEREAL_REGISTER_TYPE(Cle::OPENGL::Mesh);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Cle::Gfx::IMesh, Cle::OPENGL::Mesh);

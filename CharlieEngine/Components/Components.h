@@ -2,26 +2,14 @@
 #include <string>
 #include <glm/glm.hpp>
 #include <functional>
-#include "GfxBase.h"
 #include "Camera.h"
 #include <entt/entt.hpp>
 #include "Transform.h"
 #include "LightComponent.h"
-
+#include "CharlieCore/Vertex.h"
 namespace Cle::Components
 {
 
-	struct Name
-	{
-		std::string value{};
-		Name() : value("untitled") {}
-		Name(std::string value) : value(value) {}
-	};
-	struct TreeInfo
-	{
-		entt::entity parent = entt::null;
-		std::vector<entt::entity> Children;
-	};
 	struct Plane
 	{
 		glm::vec3 normal = glm::vec3(0, 1, 0);
@@ -71,6 +59,7 @@ namespace Cle::Components
 	};
 	struct Ray 
 	{
+
 		Ray() = default;
 		glm::vec3 origin{};
 		glm::vec3 dir{};
@@ -102,12 +91,6 @@ namespace Cle::Components
 	};
 	struct CubeMapTexture
 	{
-		std::string right;
-		std::string left;
-		std::string top;
-		std::string bottom;
-		std::string front;
-		std::string back;
-
+		std::vector<std::string> faces;
 	};
 }

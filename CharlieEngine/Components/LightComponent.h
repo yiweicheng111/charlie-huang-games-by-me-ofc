@@ -4,6 +4,7 @@ namespace Cle::Components
 	class LightComponent 
 	{
 	private:
+
 		Cle::Gfx::Light m_Light;
 	public:
 		const Cle::Gfx::Light& getLight() const

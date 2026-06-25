@@ -11,10 +11,9 @@ namespace Cle {
 
 		entt::registry* registry;
 		
-		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
+		Cle::Renderer::IRenderer& renderer;
 		std::function<void(void)> deleteObjectCallback;
-		World() = default;
-		World(entt::registry* registry, std::shared_ptr<Cle::Renderer::IRenderer> renderer) : registry(registry), renderer(renderer) {}
+		World(entt::registry* registry, Cle::Renderer::IRenderer& renderer) : registry(registry), renderer(renderer) {}
 		entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices);
 		entt::entity CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent);
 		entt::entity CreateDebugObject(const Cle::Gfx::GenericMesh& GMesh);

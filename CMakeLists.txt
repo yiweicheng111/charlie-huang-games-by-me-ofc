@@ -12,7 +12,6 @@ add_subdirectory(Server)
 add_subdirectory(Renderer)
 add_subdirectory(CharlieEngine)
 add_subdirectory(CharlieEditor)
-add_subdirectory(Shared)
 
 
 add_executable(Charlie Main.cpp)
@@ -30,6 +29,7 @@ target_include_directories(
     "${PROJECT_SOURCE_DIR}/CharlieEngine"
     "${PROJECT_SOURCE_DIR}/CharlieEditor"
 	"${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore"
+    "${PROJECT_SOURCE_DIR}/Renderer"
 )
 add_custom_target(CopyAssets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -38,5 +38,5 @@ add_custom_target(CopyAssets ALL
 )  
 
 
-target_link_libraries(Charlie PUBLIC Renderer CharlieEngine CharlieEditor enet assimp meshoptimizer Shared)
+target_link_libraries(Charlie PUBLIC Renderer CharlieEngine CharlieEditor enet assimp meshoptimizer)
 add_dependencies(Charlie CopyAssets)
