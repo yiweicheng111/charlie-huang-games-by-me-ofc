@@ -20,6 +20,9 @@ target_include_directories(
 	"${PROJECT_SOURCE_DIR}/Library/vendor"
 	"${PROJECT_SOURCE_DIR}/CharlieEngine"
 	"${PROJECT_SOURCE_DIR}/Renderer"
+	"${PROJECT_SOURCE_DIR}/Shared"
+
+	"${PROJECT_SOURCE_DIR}"
 )
 target_link_libraries(
 	Renderer PUBLIC

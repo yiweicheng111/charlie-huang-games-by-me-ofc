@@ -73,3 +73,10 @@ void Cle::OPENGL::Shader::setInt(std::string uniform, int arg)
 	glUniform1i(location, arg);
 }
 
+void Cle::OPENGL::Shader::UniformLights(int lightTexel, int lightMapSlot)
+{
+	glActiveTexture(GL_TEXTURE0 + lightMapSlot);
+	glBindTexture(GL_TEXTURE_2D, lightTexel);
+	setInt("lightTexture", lightMapSlot);
+}
+

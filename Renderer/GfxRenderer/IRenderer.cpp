@@ -11,4 +11,8 @@ namespace Cle::Renderer
 			return std::make_unique<Cle::OPENGL::Renderer>(registry);
 		}
 	}
+	void Cle::Renderer::IRenderer::UniformCamMatrix(Cle::Gfx::Camera& camera, std::shared_ptr<Cle::IShader> shader)
+	{
+	}
+
 }

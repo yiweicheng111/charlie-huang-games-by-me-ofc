@@ -1,37 +1,45 @@
-/*
-#include "ReleaseApp.h"
-#include "OpenGL4/OpenGLRenderer.h"
-#include <iostream>
+#include "CharliePlayer.h"
+#include "IRenderer.h"
 using namespace Cle::Gfx;
 using namespace Cle::Components;
-using namespace Cle::Core;
 
-void ReleaseApp::updateBoundingSpheres() {
-	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	for (auto ent : registry.view<GenericMesh>()) {
+
+void Cle::RunnableApplication::updateBoundingSpheres() {
+	static auto frustum = Frustum::createFrustumInCamera(m_camera);
+	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
 		if (registry.any_of<Transform>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			GenericMesh& m = registry.get<GenericMesh>(ent);
-			glm::mat4 model = t.computeMatrix();
-			if (m.m_Bounding_Sphere.isOnFrustum(frustum, model)) {
-				if (t.dirty) {
-					registry.get<GenericMesh>(ent).m_Bounding_Sphere.updateToWorld(m.getVertices(), model);
-					t.dirty = false;
-				}
+			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
+			auto& sphere = registry.get<Bounds>(ent).sphere;
+			glm::mat4 model = t.model;
+			if (sphere.dirty)
+			{
+				sphere.updateToWorld(m->getVertices(), model);
+				sphere.dirty = false;
 			}
 		}
 	}
 }
-ReleaseApp::~ReleaseApp()
-{
-	ma_engine_uninit(&audio_engine);
-}
-ReleaseApp::ReleaseApp()
-{
 
+void Cle::RunnableApplication::findClientCamera()
+{
+	if (!registry.ctx().contains<Cle::Gfx::Camera>()) return;
+	m_camera = registry.ctx().get<Cle::Gfx::Camera>();
+}
+
+
+
+Cle::RunnableApplication::~RunnableApplication()
+{
+	if (m_network.client) enet_host_destroy(m_network.client);
+	glfwTerminate();
+}
+Cle::RunnableApplication::RunnableApplication()
+{
+	enet_initialize();
 	ma_engine_init(nullptr, &audio_engine);
 	renderer = Renderer::IRenderer::Create(&registry);
-	window = glfwCreateWindow(800, 800, "charlie", NULL, NULL);
+	window = glfwCreateWindow(800, 800, "CHARLIE ZI", NULL, NULL);
 	assert(window != NULL);
 	glfwMakeContextCurrent(window);
 	gladLoadGL();
@@ -40,100 +48,64 @@ ReleaseApp::ReleaseApp()
 			glViewport(0, 0, width, height);
 		});
 	renderer->setSettings();
+	World = std::make_unique<Cle::World>(&registry, *renderer);
+
 	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	m_camera = Camera(glm::radians(70.0f), 1);
+	/*
+		player = World.CreateDebugObject({}, {});
+		registry.get<Cle::Components::Transform>(player).setScale({ 1,1,1 });*/
+		//	m_Controller = Cle::ObjectCameraController(&m_camera, window, &registry,player);
+
+	
 }
 
-entt::entity ReleaseApp::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices)
+
+
+
+
+
+
+
+void Cle::RunnableApplication::Run()
 {
-	entt::entity charlie = registry.create();
-	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
-	registry.emplace<Cle::Components::Transform>(charlie);
-	registry.emplace<Cle::Gfx::Material>(charlie, renderer->getMaterial());
-	registry.emplace<Cle::Components::Name>(charlie, "charlie");
-	registry.emplace<TreeInfo>(charlie);
-
-	return charlie;
-}
-
-entt::entity ReleaseApp::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent)
-{
-	entt::entity charlie = registry.create();
-	registry.emplace<Cle::Gfx::GenericMesh>(charlie, defaultVert, indices);
-	registry.emplace<Cle::Components::Transform>(charlie);
-	registry.emplace<Cle::Gfx::Material>(charlie, renderer->getMaterial());
-	registry.emplace<Cle::Components::Name>(charlie, "charlie");
-	registry.emplace<TreeInfo>(charlie);
-	registry.get<TreeInfo>(charlie).parent = Parent;
-	registry.get<TreeInfo>(Parent).Children.push_back(charlie);
-
-	return charlie;
-
-}
-void ReleaseApp::AudioPass() {
-	for (auto e : registry.view<Cle::Audio::Sound>()) {
-		auto& sound = registry.get<Cle::Audio::Sound>(e);
-		if (registry.all_of<Cle::Components::Transform>(e) && !sound.global) {
-			glm::vec3 position = registry.get<Cle::Components::Transform>(e).getPosition();
-			sound.position = position;
-			sound.UpdateVolume(m_camera.Position);
-			continue;
-		}
-	}
-}
-entt::entity ReleaseApp::CopyObject(entt::entity existing)
-{
-	entt::entity newent = registry.create();
-	if (registry.all_of<Transform>(existing)) {
-		registry.emplace<Transform>(newent, registry.get<Transform>(existing));
-	}
-	if (registry.all_of<Name>(existing)) {
-		registry.emplace<Name>(newent, registry.get<Name>(existing));
-	}
-	if (registry.all_of<Material>(existing)) {
-		registry.emplace<Material>(newent, registry.get<Material>(existing));
-	}
-	if (registry.all_of<GenericMesh>(existing)) {
-		registry.emplace<GenericMesh>(newent, registry.get<GenericMesh>(existing));
-		renderer->uploadMesh(newent, registry);
-	}
-	if (registry.all_of<TreeInfo>(existing)) {
-		registry.emplace<TreeInfo>(newent, registry.get<TreeInfo>(existing));
-	}
-	return newent;
-}
-
-void ReleaseApp::DestroyObject(entt::entity existing)
-{
-
-	if (!registry.valid(existing)) return;
-
-	if (registry.any_of<TreeInfo>(registry.get<TreeInfo>(existing).parent)) {
-		std::vector<entt::entity>& pChildren = registry.get<TreeInfo>(registry.get<TreeInfo>(existing).parent).Children;
-		pChildren.erase(std::remove(pChildren.begin(), pChildren.end(), existing), pChildren.end());
-	}
-	registry.destroy(existing);
-}
-
-
-
-void ReleaseApp::Run()
-{
-
 	while (!glfwWindowShouldClose(window))
 	{
+		bool key0 = false;
+		key0 = glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS;
+		/*if (key0&&Physics1::running)
+		{
+			Physics1::pause();
+		}
+		else if (key0 && !Physics1::running)
+		{
+			Physics1::resume(registry);
+		}*/
 		AudioPass();
 		renderer->beginFrame();
 		Render();
 		Update(0.1f);
 		renderer->clearFrame(window);
+		m_network.poll();
 	}
 }
+void Cle::RunnableApplication::AudioPass() {
+	for (auto e : registry.view<std::shared_ptr<Cle::Audio::Sound>>()) {
+		auto& sound = registry.get<std::shared_ptr<Cle::Audio::Sound>>(e);
+		if (registry.any_of<Cle::Components::Transform>(e) && !sound->global) {
+			glm::vec3 position = registry.get<Cle::Components::Transform>(e).getPosition();
 
-void ReleaseApp::Render()
+			sound->position = position;
+			sound->UpdateVolume(m_camera.Position);
+			continue;
+		}
+	}
+}
+void Cle::RunnableApplication::Render()
 {
+	if (World->worldLoading) return;
+	renderer->lightingPass();
 	//renderer->SyncMeshes(registry);
-
 	int width, height;
 	glfwGetWindowSize(window, &width, &height);
 	if (width == 0 || height == 0) return;
@@ -141,20 +113,21 @@ void ReleaseApp::Render()
 	int totalMeshes = 0;
 	int totalDrawn = 0;
 	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	for (auto entity : registry.view<GenericMesh>())
-	{
-		auto& mesh = registry.get<GenericMesh>(entity);
-		Transform& transform = registry.get<Transform>(entity);
-		Cle::Gfx::Material& material = registry.get<Cle::Gfx::Material>(entity);
-		renderer->UniformCamMatrix(m_camera, material);
-		totalMeshes++;
-		if (mesh.m_Bounding_Sphere.isOnFrustum(frustum, transform.computeMatrix())) {
-			renderer->drawMesh(entity, registry);
-			totalDrawn++;
-		}
-	}
+	auto view = registry.view<std::shared_ptr<GenericMesh>, Transform, Components::Bounds>();
+	view.each([&](auto entity, std::shared_ptr<GenericMesh>& mesh, Transform& transform, Components::Bounds& bounds)
+		{
+			if (World->worldLoading) return;
+			auto& shader = registry.emplace<std::shared_ptr<IShader>>(entity, renderer->getDefaultShader());
+			renderer->UniformCamMatrix(m_camera, shader);
+			//totalMeshes++;
+			if (bounds.sphere.isOnFrustum(frustum, transform.model) && !mapLoading) {
+				renderer->drawMesh(entity, registry, m_camera);
+				//totalDrawn++;
+			}
+		});
 	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 }
-void ReleaseApp::Update(float dt) {
-
-}*/
+void Cle::RunnableApplication::Update(float dt) {
+	//Physics1::update(registry);
+	updateBoundingSpheres();
+}

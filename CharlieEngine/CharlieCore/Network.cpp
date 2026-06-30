@@ -1,3 +1,4 @@
+
 #include "Network.h"
 #include "shared.h"
 void Cle::Network::connectServer(int port, std::string ip)
@@ -51,7 +52,7 @@ void Cle::Network::poll()
 
 			cereal::BinaryInputArchive input(ss);
 			input(packet);
-			
+
 			break;
 		}
 	}

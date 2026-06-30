@@ -1,5 +1,7 @@
+
 #include "Server.h"
 #include "shared.h"
+#include "CharlieCore/gameIO.h"
 #include <iostream>
 Cle::Server::Server(int port)
 {
@@ -8,6 +10,7 @@ Cle::Server::Server(int port)
 	address.port = port;
 	address.host = ENET_HOST_ANY;
 	host = enet_host_create(&address,32,2,0,0);
+	Cle::gameIO::getInstance().setRegistry(&registry);
 }
 void Cle::Server::Broadcast()
 {
@@ -19,7 +22,7 @@ void Cle::Server::Broadcast()
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
-				
+
 				std::stringstream ss;
 				auto peer = event.peer;
 				for (auto& entity : registry.view<networkID>())
@@ -27,13 +30,13 @@ void Cle::Server::Broadcast()
 					auto netID = &registry.get<networkID>(entity);
 					if (netID->value == -1) netID->value = (int)entity;
 					auto transform = registry.try_get < Cle::Components::Transform> (entity);
-					auto mesh = registry.try_get<MeshPacket>(entity);
+				//	auto mesh = registry.try_get<MeshPacket>(entity);
 					auto packet = EntityPacket{};
 
 					packet.m_networkID = registry.get<networkID>(entity);
 
 					if (transform) packet.transform = *transform;
-					if (mesh) packet.mesh = *mesh;
+				//	if (mesh) packet.mesh = *mesh;
 					cereal::BinaryOutputArchive output(ss);
 					output(packet);
 					auto data = ss.str();
@@ -43,15 +46,18 @@ void Cle::Server::Broadcast()
 			}
 		}
 	}
-	
+
 }
 
 int main()
 {
 	Cle::Server s(8080);
 	auto& registry = s.registry;
-
-	
+	Cle::gameIO::getInstance().LoadFile("D:/charlie-huang-games-by-me-ofc-main/build/world.bin");
+	for (auto e : registry.view<Cle::Components::Name>())
+	{
+		std::cout << registry.get<Cle::Components::Name>(e).getName() << std::endl;
+	}
 	s.Broadcast();
 	return 0;
 }

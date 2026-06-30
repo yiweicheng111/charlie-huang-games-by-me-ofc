@@ -33,7 +33,7 @@ namespace Cle::Editor
 	void EditorUI::DrawChildren(entt::entity parent)
 	{
 		if (!m_registry->any_of<TreeInfo>(parent)) return;
-		auto& children = m_registry->get<TreeInfo>(parent).Children;
+		auto& children = m_registry->get<TreeInfo>(parent).getChildren();
 		if (children.empty()) return;
 		for (entt::entity child : children) {
 			if (!m_registry->any_of<Name>(child)) {
@@ -61,7 +61,7 @@ namespace Cle::Editor
 			{
 				for (auto e : m_registry->view<TreeInfo>())
 				{  
-					if (m_registry->get<TreeInfo>(e).parent != entt::null) continue;
+					if (m_registry->get<TreeInfo>(e).getParent() != entt::null) continue;
 					if (!m_registry->any_of<Name>(e)) m_registry->emplace<Name>(e, "Untitled Object");
 					ImGui::PushID((int)e);
 
@@ -98,8 +98,8 @@ namespace Cle::Editor
 		ImGui::Begin("Properties");
 		Transform* transform =	m_registry->try_get<Transform>(m_Focused_Entity);
 		LightComponent* lightComponent = m_registry->try_get<LightComponent>(m_Focused_Entity);
-		Cle::Gfx::Material* material = m_registry->try_get<Cle::Gfx::Material>(m_Focused_Entity);
-		auto mesh = m_registry->try_get<std::shared_ptr<Cle::Gfx::IMesh>>(m_Focused_Entity);
+		Color* color = m_registry->try_get<Color>(m_Focused_Entity);
+		auto mesh = m_registry->try_get<std::shared_ptr<Cle::GenericMesh>>(m_Focused_Entity);
 		std::shared_ptr<Cle::Audio::Sound>* soundptr = m_registry->try_get<std::shared_ptr<Cle::Audio::Sound>>(m_Focused_Entity);
 		
 		Cle::Components::CubeMapTexture* cubeMap = m_registry->try_get<Cle::Components::CubeMapTexture>(m_Focused_Entity);
@@ -176,15 +176,15 @@ namespace Cle::Editor
 				ImGui::TreePop();
 			}
 		}
-		if (material)
+		if (color)
 		{
-			if (ImGui::TreeNodeEx("Material", ImGuiTreeNodeFlags_DefaultOpen))
+			if (ImGui::TreeNodeEx("Color", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 
-				glm::vec3 Color = material->getColor();
+				glm::vec3 Color = color->value;
 				if (ImGui::ColorEdit3("Color", (float*)&Color))
 				{
-					material->setColor(Color);
+					color->value = glm::vec4(Color, 1);
 				}
 				ImGui::TreePop();
 
@@ -197,21 +197,18 @@ namespace Cle::Editor
 			{
 				std::string texturePath;
 				std::string modelPath;
-				auto& gmesh = mesh->get()->gMesh;
-				texturePath = gmesh.texture ? gmesh.texture->getPath()  : "null";
-				modelPath = gmesh.ModelPath;
-
-				if (ImGui::InputText("Texture path", &texturePath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				auto gmesh = m_registry->get<std::shared_ptr<GenericMesh>>(m_Focused_Entity);
+			//	texturePath = gmesh->texture ? gmesh->texture->getPath()  : "null";
+				std::string path = gmesh->getModelPath();
+				int mindex = gmesh->getMeshIndex();
+				if (ImGui::InputText("Model path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					if (!gmesh.texture || !gmesh.texture->loaded)
-					{
-						gmesh.texture = World->renderer.createTexture(texturePath);
-					}
+					gmesh->setModelPath(path);
 				}
-				if (ImGui::InputText("Model path", &texturePath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				if (ImGui::DragInt("Model mesh index", &mindex) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
+					gmesh->setMeshIndex(mindex);
 				}
-			
 				
 				ImGui::TreePop();
 
@@ -269,8 +266,7 @@ namespace Cle::Editor
 		}
 		Cle::Components::Transform* transform = m_registry->try_get<Cle::Components::Transform>(entity);
 		if (!transform) return;
-		if (!m_registry->any_of<std::shared_ptr<Cle::Gfx::IMesh>>(entity)) return;
-		auto& mesh = m_registry->get<std::shared_ptr<Cle::Gfx::IMesh>>(entity)->gMesh;
+		auto& mesh = m_registry->get<std::shared_ptr<GenericMesh>>(entity);
 		ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());
 		int width, height;
 		glfwGetWindowSize(m_window, &width, &height);

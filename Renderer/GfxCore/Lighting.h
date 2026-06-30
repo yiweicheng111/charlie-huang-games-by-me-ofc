@@ -24,7 +24,7 @@ namespace Cle
 		float fogEnd = 1e6;
 		float ambient = 0.5f;
 		glm::vec3 ambientColor = glm::vec3(1.0f);
-		glm::vec3 backgroundColor = glm::vec3(0.5f, 0.5f, 0.9f);
+		glm::vec3 backgroundColor = glm::vec3(0.8f, 0.8f, 0.9f);
 		glm::vec3 sunDirection{1,-1.0,0.3 };
 		Cle::Components::CubeMapTexture skybox;
 

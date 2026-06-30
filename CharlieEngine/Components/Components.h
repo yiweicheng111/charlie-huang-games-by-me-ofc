@@ -9,7 +9,7 @@
 #include "CharlieCore/Vertex.h"
 namespace Cle::Components
 {
-
+	
 	struct Plane
 	{
 		glm::vec3 normal = glm::vec3(0, 1, 0);
@@ -92,5 +92,11 @@ namespace Cle::Components
 	struct CubeMapTexture
 	{
 		std::vector<std::string> faces;
+	};
+	struct Bounds
+	{
+		AABB aabb;
+		Sphere sphere;
+		Bounds(AABB a, Sphere s) : aabb(a), sphere(s) {}
 	};
 }

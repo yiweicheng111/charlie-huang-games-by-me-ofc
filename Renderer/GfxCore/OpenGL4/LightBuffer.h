@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include "OpenGL4/Texture.h"
 #include "../Light.h"
+#include "IShader.h"
 namespace Cle::OPENGL {
 	class LightBuffer
 	{
@@ -9,10 +10,10 @@ namespace Cle::OPENGL {
 		GLuint lightTexture;
 		bool sizeDirty = false;
 		bool dataDirty = false;
-		GLuint m_Program;
+		std::shared_ptr<Cle::OPENGL::Shader> shader;
 		std::vector<float> LightFloatVector;
 		std::vector<Cle::Gfx::Light> LightVector;
-		LightBuffer(GLuint Program) : m_Program(Program) 
+		LightBuffer(std::shared_ptr<Cle::OPENGL::Shader> _shader) : shader(_shader)
 		{
 			glGenTextures(1, &lightTexture);
 			glBindTexture(GL_TEXTURE_2D, lightTexture);

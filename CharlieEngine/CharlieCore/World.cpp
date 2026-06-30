@@ -8,55 +8,27 @@
 using namespace Cle::Components;
 using namespace Cle::Gfx;
 
-entt::entity Cle::World::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices)
+
+
+entt::entity Cle::World::CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMesh)
 {
 	entt::entity charlie = registry->create();
-	registry->emplace<Cle::Gfx::Material>(charlie);
-	registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
-	registry->emplace<Cle::Components::Transform>(charlie);
-	auto& t = registry->get<Cle::Components::Transform>(charlie);
+	registry->emplace < Cle::Components::TreeInfo > (charlie);
+	registry->emplace<MaterialRef>(charlie);
+	registry->emplace<Color>(charlie);
 
-	registry->emplace<Cle::Components::Name>(charlie, "charlie");
-	registry->emplace<TreeInfo>(charlie);
-	auto mesh = GenericMesh(defaultVert, indices);
-	renderer.uploadMesh(charlie, mesh, *registry);
-	auto& m = registry->get<std::shared_ptr<IMesh>>(charlie)->gMesh;
-	t.setPosition(m.offset);
-
-	return charlie;
-}
-
-entt::entity Cle::World::CreateDebugObject(const std::vector<Cle::Gfx::Vertex>& defaultVert, const std::vector<unsigned int>& indices, entt::entity Parent)
-{
-	entt::entity charlie = registry->create();
-	registry->emplace<Cle::Gfx::Material>(charlie);
-	registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
+	//registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
 
 	registry->emplace<Cle::Components::Transform>(charlie);
 	auto& t = registry->get<Cle::Components::Transform>(charlie);
 	registry->emplace<Cle::Components::Name>(charlie, "charlie");
-	registry->emplace<TreeInfo>(charlie);
-	auto mesh = GenericMesh(defaultVert, indices);
-	renderer.uploadMesh(charlie, mesh, *registry);
-	auto& m = registry->get<std::shared_ptr<IMesh>>(charlie)->gMesh;
-	t.setPosition(m.offset);
-	return charlie;
 
-}
-entt::entity Cle::World::CreateDebugObject(const GenericMesh& GMesh)
-{
-	entt::entity charlie = registry->create();
-	registry->emplace<Cle::Gfx::Material>(charlie);
-	registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
-
-	registry->emplace<Cle::Components::Transform>(charlie);
-	auto& t = registry->get<Cle::Components::Transform>(charlie);
-	registry->emplace<Cle::Components::Name>(charlie, "charlie");
-	registry->emplace<TreeInfo>(charlie);
 	renderer.uploadMesh(charlie, GMesh, *registry);
 
-	auto& m = registry->get<std::shared_ptr<IMesh>>(charlie)->gMesh;
-	t.setPosition(m.offset);
+	auto& m = registry->get<std::shared_ptr<GenericMesh>>(charlie);
+	t.setPosition(m->offset);
+	t.setScale(t.getScale() * m->scaleOffset);
+
 	return charlie;
 
 }
@@ -70,11 +42,14 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 	if (registry->any_of<Name>(existing)) {
 		registry->emplace<Name>(newent, registry->get<Name>(existing));
 	}
-	if (registry->any_of<Material>(existing)) {
-		registry->emplace<Material>(newent, registry->get<Material>(existing));
+	if (registry->any_of<Color>(existing)) {
+		registry->emplace<Color>(newent, registry->get<Color>(existing));
 	}
-	if (registry->any_of<std::shared_ptr<IMesh>>(existing)) {
-		renderer.uploadMesh(newent, registry->get<std::shared_ptr<IMesh>>(existing)->gMesh, *registry);
+	if (registry->any_of<MaterialRef>(existing)) {
+		registry->emplace<MaterialRef>(newent, registry->get<MaterialRef>(existing));
+	}
+	if (registry->any_of<std::shared_ptr<GenericMesh>>(existing)) {
+		renderer.uploadMesh(newent, registry->get<std::shared_ptr<GenericMesh>>(existing), *registry);
 	}
 	if (registry->any_of<TreeInfo>(existing)) {
 		registry->emplace<TreeInfo>(newent, registry->get<TreeInfo>(existing));
@@ -83,6 +58,7 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 		auto& audio = registry->get< std::shared_ptr<Cle::Audio::Sound>>(existing);
 		registry->emplace<std::shared_ptr<Cle::Audio::Sound>>(newent, std::make_shared<Cle::Audio::Sound>(*audio));
 	}
+
 	return newent;
 }
 
@@ -93,9 +69,8 @@ void Cle::World::DestroyObject(entt::entity existing)
 
 	if (!registry->valid(existing)) return;
 
-	if (registry->any_of<TreeInfo>(registry->get<TreeInfo>(existing).parent)) {
-		std::vector<entt::entity>& pChildren = registry->get<TreeInfo>(registry->get<TreeInfo>(existing).parent).Children;
-		pChildren.erase(std::remove(pChildren.begin(), pChildren.end(), existing), pChildren.end());
+	if (registry->any_of<TreeInfo>(registry->get<TreeInfo>(existing).getParent())) {
+		registry->get<TreeInfo>(registry->get<TreeInfo>(existing).getParent()).removeChild(existing, registry);
 	}
 	registry->destroy(existing);
 }
@@ -155,8 +130,8 @@ void Cle::World::LoadFile(std::string path)
 			material.setColor(materialpacket.getColor());
 			material.setColorMap(renderer.createTexture(materialpacket.getColorMap()));
 
-			std::vector< Cle::Gfx::GenericMesh> ModelLoaded = renderer.m_AssetHandler.LoadModel(meshpacket.getPath());
-			auto& mesh = registry->emplace<Cle::Gfx::GenericMesh>(entity, ModelLoaded.at(meshpacket.getMeshIndex()));
+			std::vector< Cle::GenericMesh> ModelLoaded = renderer.m_AssetHandler.LoadModel(meshpacket.getPath());
+			auto& mesh = registry->emplace<Cle::GenericMesh>(entity, ModelLoaded.at(meshpacket.getMeshIndex()));
 			mesh.texture = renderer.createTexture(meshpacket.getTexturePath());
 			renderer.uploadMesh(entity, *registry);
 

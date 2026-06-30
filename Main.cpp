@@ -9,6 +9,8 @@
 #include <iostream>
 #include "OPENGL4/LightBuffer.h"
 #include "shared.h"
+#include "CharlieEngine/CharlieCore/CharliePlayer.h"
+#include "CharlieCore/AssetHandler.h"
 using Vertex = Cle::Gfx::Vertex;
 std::vector<Vertex> vertices = {
 	Vertex({-0.5f,-0.5f,0.0f},{0.0f,0.0f},{0.0f,0.0f,0.0f}),
@@ -18,7 +20,9 @@ std::vector<Vertex> vertices = {
 
 int main() {
 	srand(time(NULL));
+	//Cle::Editor::EditorApplication app;
 	Cle::Editor::EditorApplication app;
+
 	app.m_network.connectServer(8080,"127.0.0.1");
 
 
@@ -27,33 +31,34 @@ int main() {
 	//std::filesystem::current_path("../");
 
 	std::cout << std::filesystem::current_path() << std::endl;;
-	const std::vector< Cle::Gfx::GenericMesh>& ModelLoaded = app.renderer->m_AssetHandler.LoadModel("map/Export.gltf");
-	//const std::vector< Cle::Gfx::GenericMesh>& ModelLoaded = app.renderer->m_AssetHandler.LoadModel("map/d.obj");
+	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/w.gltf");
+	//const std::vector< Cle::GenericMesh>& ModelLoaded = app.renderer->m_AssetHandler.LoadModel("map/d.obj");
 
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
 	int i = 0;
 	entt::entity floor;
 
-
 	for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
-		i++;
 	
 		auto e = app.World->CreateDebugObject(I);
-
-		auto& m = app.registry.get< std::shared_ptr <Cle::Gfx::IMesh >>(e);
-
-		auto& gm = m->gMesh;
-
+		if (i == 0)
+		{
+			floor = e;
+			app.registry.emplace<std::shared_ptr<Cle::Audio::Sound>>(e, std::make_shared<Cle::Audio::Sound>("beatit.mp3", &app.audio_engine));
+			app.registry.get<std::shared_ptr<Cle::Audio::Sound>>(e)->Play();
+			app.m_UIHandler.m_Focused_Entity = floor;
+		}
 	
-		app.registry.get<Cle::Gfx::Material>(e).usesColorMap = false;
-		app.registry.get<Cle::Gfx::Material>(e).setColor(gm.assimpRequestedColor);
+		//app.registry.get<Cle::Components::MaterialRef>(e).usesColorMap = false;
+		app.registry.get<Cle::Components::Color>(e).value = glm::vec4(I->assimpRequestedColor ,1);
 
 		//app.registry.get<Cle::Gfx::Material>(e).setColorMap(Cle::OPENGL::Texture(bat.ID));
-		if (!gm.assimpRequestedDiffuse.empty()) gm.texture = app.renderer->createTexture(gm.assimpRequestedDiffuse);
+		//if (!gm.assimpRequestedDiffuse.empty()) gm.texture = app.renderer->createTexture(gm.assimpRequestedDiffuse);
 
-	
+		i++;
+
 	}
 
 	//Cle::Physics::Physics1::reg(app.registry);

@@ -6,14 +6,16 @@ using namespace Cle::Gfx;
 using namespace Cle::Components;
 void Cle::Editor::EditorApplication::updateAABBS() {
 	static auto frustum = Frustum::createFrustumInCamera(m_camera);
-	for (auto ent : registry.view<std::shared_ptr<IMesh>>()) {
+	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
 		if (registry.any_of<Transform>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			auto& m = registry.get<std::shared_ptr<IMesh>>(ent)->gMesh;
+			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
 			glm::mat4 model = t.model;
-			auto& aabb = m.m_AABB;
+			auto& aabb = registry.get<Bounds>(ent).aabb;
+		
+	
 			if (aabb.dirty) {
-				aabb = m.m_local_AABB;
+				aabb = m->m_local_AABB;
 				aabb.max *= t.getScale();
 				aabb.min *= t.getScale();
 				aabb.Translate(t.getPosition());
@@ -25,12 +27,17 @@ void Cle::Editor::EditorApplication::updateAABBS() {
 
 void Cle::Editor::EditorApplication::updateBoundingSpheres() {
 	static auto frustum = Frustum::createFrustumInCamera(m_camera);
-	for (auto ent : registry.view<std::shared_ptr<IMesh>>()) {
+	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
 		if (registry.any_of<Transform>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			auto& m = registry.get<std::shared_ptr<IMesh>>(ent)->gMesh;
+			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
+			auto& sphere = registry.get<Bounds>(ent).sphere;
 			glm::mat4 model = t.model;
-			m.m_Bounding_Sphere.updateToWorld(m.getVertices(), model);
+			if (sphere.dirty)
+			{
+				sphere.updateToWorld(m->getVertices(), model);
+				sphere.dirty = false;
+			}
 		}
 	}
 }
@@ -46,6 +53,8 @@ Cle::Editor::EditorApplication::EditorApplication()
 {
 	enet_initialize();
 	ma_engine_init(nullptr, &audio_engine);
+	registry.ctx().emplace<ma_engine*>(&audio_engine);
+
 	renderer = Renderer::IRenderer::Create(&registry);
 	window = glfwCreateWindow(800, 800, "CHARLIE ZI", NULL, NULL);
 	assert(window != NULL);
@@ -60,6 +69,8 @@ Cle::Editor::EditorApplication::EditorApplication()
 
 	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	m_camera = Camera(glm::radians(70.0f), 1);
+	registry.ctx().emplace<Camera*>(&m_camera);
+
 /*
 	player = World.CreateDebugObject({}, {});
 	registry.get<Cle::Components::Transform>(player).setScale({ 1,1,1 });*/
@@ -131,8 +142,9 @@ void Cle::Editor::EditorApplication::runPointer()
 	ray.SetFromPointer(pX, pY, winWidth, winHeight, m_camera);
 	float nearestD = (std::numeric_limits<float>::max)();
 	entt::entity nearestEnt = entt::null;
-	for (auto& ent : registry.view<std::shared_ptr<IMesh>>()) {
-		AABB aabb = registry.get<std::shared_ptr<IMesh>>(ent)->gMesh.m_AABB;
+	for (auto& ent : registry.view<std::shared_ptr<GenericMesh>>()) {
+		if (!registry.any_of<Components::Bounds>(ent)) continue;
+		auto& aabb = registry.get<Components::Bounds>(ent).aabb;
 		float distance = aabb.intersects(ray);
 		if (distance == -1) continue;
 		if (distance >= nearestD) continue;
@@ -160,10 +172,13 @@ void Cle::Editor::EditorApplication::Run()
 		}*/
 		AudioPass();
 		renderer->beginFrame();
+
 		Render();
+
 		Update(0.1f);
 		renderer->clearFrame(window);
 		m_network.poll();
+
 	}
 }
 void Cle::Editor::EditorApplication::AudioPass() {
@@ -182,6 +197,10 @@ void Cle::Editor::EditorApplication::Render()
 {
 	if (World->worldLoading) return;
 	renderer->lightingPass();
+	renderer->lightPass();
+
+	renderer->UniformCamMatrix(m_camera, renderer->getDefaultShader());
+
 	//renderer->SyncMeshes(registry);
 	int width, height;
 	glfwGetWindowSize(window, &width, &height);
@@ -190,17 +209,18 @@ void Cle::Editor::EditorApplication::Render()
 	int totalMeshes = 0;
 	int totalDrawn = 0;
 	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	auto view = registry.view<std::shared_ptr<IMesh>,Transform, Cle::Gfx::Material>();
-	view.each([&](auto entity, std::shared_ptr<IMesh>& mesh, Transform& transform, Material& material)
+	auto view = registry.view<std::shared_ptr<GenericMesh>,Transform,Bounds>();
+	view.each([&](auto entity, std::shared_ptr<GenericMesh>& mesh, Transform& transform, Bounds& bounds)
 		{
 			if (World->worldLoading) return;
-
-			renderer->UniformCamMatrix(m_camera, material);
 			//totalMeshes++;
-		 if (mesh->gMesh.m_Bounding_Sphere.isOnFrustum(frustum, transform.model) && !mapLoading) {
+		if (bounds.sphere.isOnFrustum(frustum, transform.model) && !mapLoading) {
 				renderer->drawMesh(entity, registry,m_camera);
-				//totalDrawn++;
+
+			//	totalDrawn++;
+
 			}
+		
 		});
 	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 }

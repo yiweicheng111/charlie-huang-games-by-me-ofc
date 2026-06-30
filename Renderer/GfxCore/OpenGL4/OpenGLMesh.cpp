@@ -19,3 +19,16 @@ void Cle::OPENGL::Mesh::draw()
 	
 }
 
+void Cle::OPENGL::Mesh::draw(unsigned int nebo, unsigned int count)
+{
+	glBindVertexArray(m_VAO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, nebo);
+
+	if (indexCount == 0) {
+		glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+	}
+	else {
+		glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, 0);
+	}
+
+}

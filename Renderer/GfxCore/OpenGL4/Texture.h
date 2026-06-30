@@ -2,6 +2,7 @@
 #include "OpenGL4/VAO.h"
 #include "stb/stb_image.h"
 #include "../ITexture.h"
+#include <cereal/types/polymorphic.hpp>
 #include <iostream>
 namespace Cle::OPENGL 
 {
@@ -19,6 +20,17 @@ namespace Cle::OPENGL
 		Texture(std::string path,GLenum target);
 		Texture() = default;
 		Texture(unsigned int ID) : ID(ID) {}
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(cereal::base_class<Cle::Gfx::ITexture>(this));
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(cereal::base_class<Cle::Gfx::ITexture>(this));
+
+		}
 		virtual void bind(unsigned int slot) const override {
 			glBindTexture(GL_TEXTURE_2D, ID);
 		}
@@ -59,6 +71,7 @@ namespace Cle::OPENGL
 			if (channels == 4) format = GL_RGBA;
 			glTexSubImage2D(target, 0, 0, 0, width, height, format, target, data);
 			loaded = true;
+			
 		}
 	};
 }

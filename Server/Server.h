@@ -10,7 +10,6 @@ namespace Cle
 	public:
 		ENetAddress address;
 		ENetHost* host;
-
 		entt::registry registry;
 		bool running = true;
 		~Server()

@@ -13,21 +13,32 @@
 namespace Cle::OPENGL 
 {
 	
-	struct Mesh : Cle::Gfx::IMesh
+	class Mesh : public Cle::Gfx::IMesh
 	{
-
-		int indexCount, vertexCount = 0;
+	private:
+	public:
+		std::shared_ptr<Cle::OPENGL::Mesh> getLodMesh(int index) 
+		{
+			if (index >= LODmeshes.size()) return nullptr;
+			return std::static_pointer_cast<Cle::OPENGL::Mesh>(LODmeshes.at(index));
+		}
+		const std::vector<std::shared_ptr<Cle::Gfx::IMesh>>& getLodMesh() const
+		{
+			return LODmeshes;
+		}
+		void addLodMesh(std::shared_ptr<Cle::Gfx::IMesh> mesh)
+		{
+			LODmeshes.push_back(mesh);
+		}
 		unsigned int m_VAO{}, m_VBO{}, m_EBO{};
+		
 
 		virtual void draw() override;
 
-		Mesh() {}
+		Mesh() = default;
 		~Mesh() {
 			glDeleteBuffers(1, &m_VBO);  glDeleteBuffers(1, &m_EBO); glDeleteVertexArrays(1, &m_VAO);
-			for (auto& pair : LODIndicesEBOMap)
-			{
-				glDeleteBuffers(1, &pair.first);
-			}
+			
 		}
 
 		Mesh(unsigned int VAO, unsigned int VBO)
@@ -36,11 +47,15 @@ namespace Cle::OPENGL
 		Mesh(unsigned int VAO, unsigned int VBO, unsigned int EBO)
 			: m_VBO(VBO), m_VAO(VAO), m_EBO(EBO) {
 		}
-		Mesh(Cle::Gfx::GenericMesh g_Mesh)
+		Mesh(unsigned int VAO, unsigned int VBO, unsigned int EBO, unsigned int _indexCount)
+			: m_VBO(VBO), m_VAO(VAO), m_EBO(EBO) {
+			indexCount = _indexCount;
+		}
+		void draw(unsigned int nebo, unsigned int count);
+		Mesh(std::shared_ptr<Cle::GenericMesh> g_Mesh)
 		{
-			gMesh = g_Mesh;
-			auto& indices = g_Mesh.getIndices();
-			auto& vertices = g_Mesh.getVertices();
+			auto& indices = g_Mesh->getIndices();
+			auto& vertices = g_Mesh->getVertices();
 			indexCount = indices.size();
 			vertexCount = vertices.size();
 			VBO vbo(vertices);
@@ -54,15 +69,12 @@ namespace Cle::OPENGL
 			m_VAO = vao.ID;
 			m_VBO = vbo.ID;
 			m_EBO = ebo.ID;
-			LODIndicesEBOMap[ebo.ID] = indices;
 			//std::cout << "size" << indices.size() << std::endl;
-
-			if (indices.size() < 150) return;
+			if (indices.size() < 100) return;
 			for (int i = 2; i < 5; i++)
 			{
-				size_t sindex = size_t(indices.size() * 1. / (i*i*i));
-				if (sindex < 6) sindex = 6;
-				float error = 210.5;
+				size_t sindex = size_t(indices.size() * 1. / (i*i));
+				float error = 110.5;
 				std::vector<unsigned int> newIndices(indices.size());
 				int nsize = meshopt_simplifySloppy(newIndices.data(), indices.data(), indices.size(), &vertices[0].Position.x, vertices.size(), sizeof(Cle::Gfx::Vertex), sindex, error);
 				newIndices.resize(nsize);
@@ -70,25 +82,13 @@ namespace Cle::OPENGL
 
 				EBO nebo(newIndices);
 
-				LODIndicesEBOMap[nebo.ID] = newIndices;
-
+				addLodMesh(std::make_shared<Cle::OPENGL::Mesh>(m_VAO, m_VBO, nebo.ID, newIndices.size()));
 			}
 		}
 
-		template <class Archive>
-		void save(Archive& ar) const
-		{
-			ar(cereal::base_class<Cle::Gfx::IMesh>(this));
-		}
-		template <class Archive>
-		void load(Archive& ar)
-		{
-			ar(cereal::base_class<Cle::Gfx::IMesh>(this));
-		}
+
 
 		
 	};
 	
 }
-CEREAL_REGISTER_TYPE(Cle::OPENGL::Mesh);
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Cle::Gfx::IMesh, Cle::OPENGL::Mesh);

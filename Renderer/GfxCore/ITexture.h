@@ -12,10 +12,12 @@ namespace Cle::Gfx
 		virtual void bind(unsigned int slot) const = 0;
 		bool loaded = false;
 		bool gpuUploaded = false;
+		ITexture(std::string path) { this->path = path; }
 		std::string getPath() const
 		{
 			return path;
 		}
+		ITexture() = default;
 		virtual void setPath(std::string newPath) = 0;
 		template <class Archive>
 		void save(Archive& ar) const
