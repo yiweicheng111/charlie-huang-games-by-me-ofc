@@ -24,22 +24,33 @@ namespace Cle
 				return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
 			}
 		};
-		std::unordered_map<std::pair<std::string, int>, std::shared_ptr<GenericMesh>, pairhash> meshCache;
+		std::unordered_map<std::pair<std::string,int>, std::shared_ptr<GenericMesh>,pairhash> meshCache;
 		std::unordered_map<std::string, std::vector< std::shared_ptr<GenericMesh>>> modelCache;
 
 
 
 		std::shared_ptr<GenericMesh> getOrMakeMesh(const std::string& path, int meshIndex)
 		{
-			if (meshCache.contains({ path,meshIndex }))
+			const auto& meshes = LoadModel(path);
+			if (meshIndex >= meshes.size()) meshIndex = meshes.size() - 1;
+			if (!modelCache.contains(path))
 			{
-				return meshCache[{ path, meshIndex }];
+				meshCache[{ path, meshIndex }] = meshes.at(meshIndex);
+				std::cout << "not loaded model before " << path << "index " << meshIndex << std::endl;
+				return meshes.at(meshIndex);
 			}
-			return meshCache[{ path, meshIndex }];
+			else if (!meshCache.contains({path,meshIndex}))
+			{
+				meshCache[{ path, meshIndex }] = modelCache[path].at(meshIndex);
+				std::cout << "not loaded mesh before " << path << "index " << meshIndex << std::endl;
+
+			}
+	
+			return  modelCache[path].at(meshIndex);
 		}
 
 		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 parentTransform);
-		GenericMesh ProcessMesh(aiMesh* Mesh, const aiScene* scene, const glm::mat4& global);
+		GenericMesh ProcessMesh(aiMesh* Mesh, const aiScene* scene);
 		std::vector<std::shared_ptr<GenericMesh>>& LoadModel(std::string path);
 	};
 }

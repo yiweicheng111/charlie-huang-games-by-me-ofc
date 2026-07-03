@@ -4,8 +4,9 @@
 #include <fstream>
 #include "Mesh.h"
 #include "Material.h"
-#include "Components/Components.h"
+#include "CharlieEngine/Components.h"
 #include "shared.h"
+#include "World.h"
 using namespace Cle::Components;
 void Cle::gameIO::Snapshot(std::string path)
 {
@@ -16,9 +17,10 @@ void Cle::gameIO::Snapshot(std::string path)
 
 	snapshot
 		.get<entt::entity>(arch)
+		.get<Cle::Components::TreeInfo>(arch)
 	     .get<Cle::Components::Transform>(arch)
 		.get<std::shared_ptr<GenericMesh>>(arch)
-		.get<Cle::Components::MaterialRef>(arch)
+		.get<Cle::MaterialRef>(arch)
 		//.get<std::shared_ptr<Cle::Gfx::ITexture>>(arch)
 		.get<Cle::Components::Color>(arch)
 		.get<Cle::Components::Name>(arch);
@@ -35,18 +37,25 @@ void Cle::gameIO::LoadFile(std::string path)
 	registry->clear();
 	std::ifstream f(path, std::ios::binary);
 	cereal::BinaryInputArchive arch(f);
-	entt::continuous_loader loader{ *registry };
+	entt::snapshot_loader loader{ *registry };
+
 	loader
 		.get<entt::entity>(arch)
+		.get<Cle::Components::TreeInfo>(arch)
 		.get<Cle::Components::Transform>(arch)
 		.get<std::shared_ptr<GenericMesh>>(arch)
-		.get<Cle::Components::MaterialRef>(arch)
+		.get<Cle::MaterialRef>(arch)
 	//	.get<std::shared_ptr<Cle::Gfx::ITexture>>(arch)
 		.get<Cle::Components::Color>(arch)
 		.get<Cle::Components::Name>(arch).orphans();
-	for (auto ent : registry->view<Cle::Components::Name>())
+	for (auto ent : registry->view<Cle::Components::TreeInfo>())
 	{
-		registry->emplace_or_replace<Cle::Components::TreeInfo>(ent);
+		auto& treeinfo =registry->get<Cle::Components::TreeInfo>(ent);
+		if (registry->valid(treeinfo.getParent()) && registry->any_of<TreeInfo>(treeinfo.getParent()))
+		{
+			treeinfo.setParent(ent, treeinfo.getParent(), registry);
+		}
+		
 	}
 
 }

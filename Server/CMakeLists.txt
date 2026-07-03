@@ -11,7 +11,6 @@ target_include_directories(
 	Server PUBLIC
 	"${PROJECT_SOURCE_DIR}/Library/vendor/enet/include"
 	"${PROJECT_SOURCE_DIR}/Library/vendor"
-	"${PROJECT_SOURCE_DIR}/Shared"
 	"${PROJECT_SOURCE_DIR}/CharlieEngine"
 	"${CMAKE_SOURCE_DIR}"
 )

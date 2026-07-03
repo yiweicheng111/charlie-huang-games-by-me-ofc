@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 4.0)
 set(CMAKE_CXX_STANDARD 20)
 file(GLOB_RECURSE SourceFiles
-	"GfxBase/*.cpp"
-	"GfxBase/*.h"
-	"GfxBase/*.c"
+
+	"${CMAKE_CURRENT_SOURCE_DIR}/GfxBase.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/GfxBase.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/glad.c"
+
 	"GfxCore/*.cpp"
 	"GfxCore/*.h"
 	"${PROJECT_SOURCE_DIR}/Library/vendor"
@@ -14,7 +16,6 @@ add_library(Renderer STATIC ${SourceFiles})
 target_include_directories(
 	Renderer PUBLIC
 	"GfxCore"
-	"GfxBase"
 	"GfxRenderer"
 	"${PROJECT_SOURCE_DIR}/Library/include"
 	"${PROJECT_SOURCE_DIR}/Library/vendor"

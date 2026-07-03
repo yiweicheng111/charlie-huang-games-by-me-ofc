@@ -1,6 +1,6 @@
 #pragma once
 #include "glm/glm.hpp"
-#include "Components/Components.h"
+#include "CharlieEngine/Components.h"
 namespace Cle
 {
 	class Lighting

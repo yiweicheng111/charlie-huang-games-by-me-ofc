@@ -9,7 +9,7 @@
 #include "meshoptimizer/src/meshoptimizer.h"
 #include <iostream>
 #include <cereal/types/polymorphic.hpp>
-
+#include "GenericMesh.h"
 namespace Cle::OPENGL 
 {
 	

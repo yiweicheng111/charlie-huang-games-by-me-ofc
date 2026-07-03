@@ -6,7 +6,7 @@
 #include <entt/entt.hpp>
 #include "Transform.h"
 #include "LightComponent.h"
-#include "CharlieCore/Vertex.h"
+#include "CharlieEngine/Vertex.h"
 namespace Cle::Components
 {
 	

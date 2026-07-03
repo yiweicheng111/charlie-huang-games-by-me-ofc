@@ -2,7 +2,7 @@
 #include "VAO.h"
 #include "VBO.h"
 #include "Program.h"
-#include "CharlieCore/Vertex.h"
+#include "CharlieEngine/Vertex.h"
 #include <iostream>
 using namespace Cle::Gfx;
 Cle::OPENGL::VBO::VBO(const std::vector<Vertex>& vertices)

@@ -3,7 +3,7 @@
 #include "Camera.h"
 #include <GLFW/glfw3.h>
 #include <entt/entt.hpp>
-#include "../Components/Components.h"
+#include "../CharlieEngine/Components.h"
 #include "Physics.h"
 /*
 #include "CameraController.h"

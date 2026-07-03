@@ -1,5 +1,5 @@
 #pragma once
-#include "Components/Components.h"
+#include "CharlieEngine/Components.h"
 namespace Cle
 {
 
@@ -11,12 +11,15 @@ namespace Cle
 		int loadedMeshIndex = 0;
 
 	public:
+
 		bool modelPathDirty = false;
 		bool modelIndexDirty = false;
+	
 		void setModelPath(const std::string& path)
 		{
 			ModelPath = path;
 			modelPathDirty = true;
+
 		}
 		void setMeshIndex(int index)
 		{
@@ -33,11 +36,13 @@ namespace Cle
 		}
 		bool gpuUploaded = false;
 		GenericMesh() {};
+		GenericMesh(std::string mPath, int index) : ModelPath(mPath), loadedMeshIndex(index) {}
 		GenericMesh(const GenericMesh& other) = default;
 
 		glm::vec3 offset{};
-		float scaleOffset = 1;
-
+		glm::vec3 scaleOffset = glm::vec3(1.0f);
+		glm::vec3 positionOffset = glm::vec3(0.0f);
+		glm::quat orientationOffset;
 
 		Cle::Components::AABB m_local_AABB;
 		Cle::Components::Sphere m_local_Bounding_Sphere;

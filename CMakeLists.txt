@@ -20,15 +20,12 @@ add_executable(Charlie Main.cpp)
 target_include_directories(
     Charlie PRIVATE
     "${PROJECT_SOURCE_DIR}/Library/include"
-    "${PROJECT_SOURCE_DIR}/Shared"
     "${PROJECT_SOURCE_DIR}/Library/vendor"
     "${PROJECT_SOURCE_DIR}/Library/vendor/meshoptimizer/src"
     "${PROJECT_SOURCE_DIR}/Renderer/GfxCore"
-    "${PROJECT_SOURCE_DIR}/Renderer/GfxBase"
     "${PROJECT_SOURCE_DIR}/Renderer/GfxRenderer"
     "${PROJECT_SOURCE_DIR}/CharlieEngine"
     "${PROJECT_SOURCE_DIR}/CharlieEditor"
-	"${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore"
     "${PROJECT_SOURCE_DIR}/Renderer"
 )
 add_custom_target(CopyAssets ALL

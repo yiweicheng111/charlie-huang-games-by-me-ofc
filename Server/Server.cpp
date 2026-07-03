@@ -1,8 +1,10 @@
 
 #include "Server.h"
 #include "shared.h"
-#include "CharlieCore/gameIO.h"
+#include "CharlieEngine/gameIO.h"
 #include <iostream>
+#include <fstream>
+using namespace Cle;
 Cle::Server::Server(int port)
 {
 	std::cout<<port<<std::endl;
@@ -11,6 +13,18 @@ Cle::Server::Server(int port)
 	address.host = ENET_HOST_ANY;
 	host = enet_host_create(&address,32,2,0,0);
 	Cle::gameIO::getInstance().setRegistry(&registry);
+	registry.on_update<Cle::Components::Transform>().connect<&Cle::Server::updateTransform>(*this);
+	registry.on_update<std::shared_ptr<Cle::GenericMesh>>().connect<&Cle::Server::updateMesh>(*this);
+
+
+}
+void Cle::Server::updateTransform(entt::registry& registry, entt::entity entity)
+{
+	dirtyTransforms.insert(entity);
+}
+void Cle::Server::updateMesh(entt::registry& registry, entt::entity entity)
+{
+	dirtyMeshes.insert(entity);
 }
 void Cle::Server::Broadcast()
 {
@@ -22,31 +36,51 @@ void Cle::Server::Broadcast()
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
-
-				std::stringstream ss;
-				auto peer = event.peer;
-				for (auto& entity : registry.view<networkID>())
-				{
-					auto netID = &registry.get<networkID>(entity);
-					if (netID->value == -1) netID->value = (int)entity;
-					auto transform = registry.try_get < Cle::Components::Transform> (entity);
-				//	auto mesh = registry.try_get<MeshPacket>(entity);
-					auto packet = EntityPacket{};
-
-					packet.m_networkID = registry.get<networkID>(entity);
-
-					if (transform) packet.transform = *transform;
-				//	if (mesh) packet.mesh = *mesh;
-					cereal::BinaryOutputArchive output(ss);
-					output(packet);
-					auto data = ss.str();
-					auto enet_packet = enet_packet_create(data.data(),data.size(),ENET_PACKET_FLAG_RELIABLE);
-					enet_peer_send(peer, 0, enet_packet);
-				}
+			{
+				onJoin(event.peer);
+			}
 			}
 		}
 	}
+}
+void Cle::Server::onJoin(ENetPeer* peer)
+{
 
+	std::ostringstream oss(std::ios::binary);
+	{
+		cereal::BinaryOutputArchive ar(oss);
+		std::vector<EntityPacket> packets;
+		for (auto ent : registry.view<Replicated>())
+		{
+			EntityPacket entityp;
+			if (!registry.any_of<networkID>(ent))
+			{
+				registry.emplace<networkID>(ent, (int)ent);
+			}
+			entityp.netID = registry.get<networkID>(ent);
+			if (registry.any_of<Cle::Components::Transform>(ent))
+			{
+				entityp.transform = registry.get<Cle::Components::Transform>(ent);
+			}
+		
+			if (registry.any_of<Cle::Components::Color>(ent))
+			{
+				entityp.color = registry.get<Cle::Components::Color>(ent);
+			}
+			if (registry.any_of<std::shared_ptr<GenericMesh>>(ent))
+			{
+				auto& gmesh = registry.get<std::shared_ptr<GenericMesh>>(ent);
+				entityp.mesh = MeshPacket({gmesh->getModelPath(),gmesh->getMeshIndex()});
+			}
+			packets.push_back(entityp);
+		
+		}
+		ar(Cle::Header{ ServerMessage::OnJoin });
+		ar(packets);
+		ENetPacket* packet = enet_packet_create(oss.str().data(), oss.str().size(), ENET_PACKET_FLAG_RELIABLE);
+		enet_peer_send(peer, 0, packet);
+		
+	}
 }
 
 int main()
@@ -56,7 +90,8 @@ int main()
 	Cle::gameIO::getInstance().LoadFile("D:/charlie-huang-games-by-me-ofc-main/build/world.bin");
 	for (auto e : registry.view<Cle::Components::Name>())
 	{
-		std::cout << registry.get<Cle::Components::Name>(e).getName() << std::endl;
+		registry.emplace<Replicated>(e);
+
 	}
 	s.Broadcast();
 	return 0;

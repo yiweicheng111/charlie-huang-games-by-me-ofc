@@ -16,12 +16,19 @@ std::vector<GenericMesh>AssetHandler::ProcessNode(aiNode* node, const aiScene* s
 
 	std::vector<GenericMesh> meshes;
 	aiMatrix4x4 aiGlobal = pTransform * node->mTransformation;
-	glm::mat4 global = toGlm(pTransform * node->mTransformation);
+	aiQuaternion rot;
+	aiVector3D scale;
+	aiVector3D pos;
+	aiGlobal.Decompose(scale, rot ,pos);
 	meshes.reserve(node->mNumMeshes);
 	for (unsigned int i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		GenericMesh gMesh = ProcessMesh(mesh, scene, global);
+		GenericMesh gMesh = ProcessMesh(mesh, scene);
+		gMesh.scaleOffset = glm::vec3(scale.x, scale.y, scale.z);
+		gMesh.orientationOffset = glm::quat(rot.w,rot.x, rot.y, rot.z);
+		gMesh.positionOffset = glm::vec3(pos.x, pos.y, pos.z);
+
 		meshes.push_back(gMesh);
 	}
 	for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -31,26 +38,27 @@ std::vector<GenericMesh>AssetHandler::ProcessNode(aiNode* node, const aiScene* s
 	}
 	return meshes;
 }
-GenericMesh AssetHandler::ProcessMesh(aiMesh* Mesh, const aiScene* scene, const glm::mat4& global)
+
+GenericMesh AssetHandler::ProcessMesh(aiMesh* Mesh, const aiScene* scene)
 {
 	std::vector<Vertex> vertices;
 	vertices.reserve(Mesh->mNumVertices);
 	std::vector<unsigned int> indices;
 	indices.reserve(Mesh->mNumFaces * 3);
-	
-	glm::vec3 max = glm::vec3(global * glm::vec4(Mesh->mVertices[0].x, Mesh->mVertices[0].y, Mesh->mVertices[0].z, 1.0f));
+
+	glm::vec3 max = glm::vec3( glm::vec4(Mesh->mVertices[0].x, Mesh->mVertices[0].y, Mesh->mVertices[0].z, 1.0f));
 	glm::vec3 min = max;
 	for (unsigned int i = 0; i < Mesh->mNumVertices; i++) {
 		Vertex v{};
 
-		v.Position = glm::vec3(global * glm::vec4(Mesh->mVertices[i].x, Mesh->mVertices[i].y, Mesh->mVertices[i].z, 1));
+		v.Position = glm::vec3(glm::vec4(Mesh->mVertices[i].x, Mesh->mVertices[i].y, Mesh->mVertices[i].z, 1));
 
 		max = glm::max(v.Position, max);
 		min = glm::min(v.Position, min);
 
 		if (Mesh->mNormals)
 		{
-			v.Normal = glm::normalize(glm::vec3(Mesh->mNormals[i].x, Mesh->mNormals[i].y, Mesh->mNormals[i].z) * glm::mat3(glm::transpose(glm::inverse(global))));
+			v.Normal = glm::normalize(glm::vec3(Mesh->mNormals[i].x, Mesh->mNormals[i].y, Mesh->mNormals[i].z));
 
 		}
 
@@ -64,20 +72,15 @@ GenericMesh AssetHandler::ProcessMesh(aiMesh* Mesh, const aiScene* scene, const 
 	}
 	glm::vec3 center = (max + min) / 2.0f;
 	float maxV = std::max({ max.x,max.y,max.z });
-	for (auto& i : vertices) {
-		i.Position -= center;
-		i.Position /= maxV;
-	}
+
 	for (unsigned int i = 0; i < Mesh->mNumFaces; i++) {
 		aiFace face = Mesh->mFaces[i];
 		for (unsigned int j = 0; j < face.mNumIndices; j++) {
 			indices.push_back(face.mIndices[j]);
 		}
 	}
-	
+
 	GenericMesh loadedMesh(vertices, indices);
-	loadedMesh.scaleOffset = maxV;
-	loadedMesh.offset = center;
 	if (Mesh->mMaterialIndex >= 0)
 	{
 		aiMaterial* material = scene->mMaterials[Mesh->mMaterialIndex];
@@ -94,6 +97,7 @@ GenericMesh AssetHandler::ProcessMesh(aiMesh* Mesh, const aiScene* scene, const 
 	}
 	return loadedMesh;
 }
+
 std::vector<std::shared_ptr<GenericMesh>>& AssetHandler::LoadModel(std::string path)
 {
 	if (!std::filesystem::exists(path)) {
@@ -109,7 +113,7 @@ std::vector<std::shared_ptr<GenericMesh>>& AssetHandler::LoadModel(std::string p
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(
 		path,
-		aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenUVCoords | aiProcess_GenUVCoords
+		aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenUVCoords | aiProcess_GenUVCoords | aiProcess_JoinIdenticalVertices
 	);
 
 	std::vector<GenericMesh> Meshes = ProcessNode(scene->mRootNode, scene, aiMatrix4x4());

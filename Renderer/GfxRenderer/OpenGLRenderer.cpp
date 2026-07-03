@@ -1,10 +1,10 @@
 #include "Camera.h"
 #include "OPENGL4/OpenGLRenderer.h"
 #include "OpenGL4/OpenGLMesh.h"
-#include "Components/Transform.h"
+#include "CharlieEngine/Transform.h"
 #include "Mesh.h"
 #include "Material.h"
-#include "CharlieCore/AssetHandler.h"
+#include "CharlieEngine/AssetHandler.h"
 #include <iostream>
 #include <glm/gtx/norm.hpp>
 #define materialColorMap 0
@@ -23,6 +23,7 @@ void Cle::OPENGL::Renderer::beginFrame()
 }
 void Cle::OPENGL::Renderer::lightPass()
 {
+	
 	auto& buffer = m_registry->ctx().get<LightBuffer>();
 	buffer.updateVector();
 	buffer.shader->Bind();
@@ -44,11 +45,39 @@ void Cle::OPENGL::Renderer::lightPass()
 
 
 }
-Cle::OPENGL::Renderer::Renderer(entt::registry* registry) : m_registry(registry) {
+Cle::OPENGL::Renderer::Renderer(entt::registry* registry) {
+	m_registry = registry;
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+}
+std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh)
+{
+	
+	if (!gpuMeshCache.contains(mesh))
+	{
+		
+			gpuMeshCache[mesh] = std::make_shared<OPENGL::Mesh>(mesh);
+			gpuMeshCache[mesh]->gpuUploaded = true;
+		
+	}
+
+	return gpuMeshCache[mesh];
+	
+}
+std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::getOrMakeTexture(const std::string& path)
+{
+	if (!textureCache.contains(path))
+	{
+	
+			textureCache[path] = std::make_shared<OPENGL::Texture>(path);
+
+	}
+
+	return textureCache[path];
+
+	
 }
 std::shared_ptr<Cle::IShader> Cle::OPENGL::Renderer::getDefaultShader()
 {
@@ -64,20 +93,7 @@ void Cle::OPENGL::Renderer::clearColor(float r, float g, float b, float w)
 {
 	glClearColor(r, g, b, w);
 }
-void Cle::OPENGL::Renderer::uploadMesh(entt::entity e, std::shared_ptr<Cle::GenericMesh> mesh, entt::registry& registry)
-{
-	auto m = Cle::AssetHandler::getInstance().getOrMakeMesh(mesh->getModelPath(), mesh->getMeshIndex());
-	registry.emplace_or_replace< std::shared_ptr<Cle::GenericMesh>>(e, m);
-	auto& bounds = registry.emplace_or_replace<Components::Bounds>(e, m->m_local_AABB,m->m_local_Bounding_Sphere);
 
-	m->verticesDirty = true;
-	m->indicesDirty = true;
-	m->m_local_AABB.updateToWorld(m->getVertices(), glm::mat4(1.0f));
-
-
-
-
-}
 static void onlightadded(entt::registry& registry,entt::entity e)
 {	
 	auto& lightbuffer = registry.ctx().get<LightBuffer>();
@@ -112,97 +128,6 @@ void Cle::OPENGL::Renderer::setSettings()
 }
 
 
-void Cle::OPENGL::Renderer::UniformCamMatrix(Cle::Gfx::Camera& camera, std::shared_ptr<Cle::IShader> shader) {
-	shader->Bind();
-	shader->setMat4("camMatrix", camera.getProjection() * camera.getViewMatrix());
-	shader->setVec3("camPos", camera.Position);
-	auto& instance = m_registry->ctx().get<Cle::Lighting*>();
-	shader->setFloat("fogStart", instance->fogStart);
-	shader->setFloat("fogEnd", std::min({ instance->fogEnd,camera.far }));
-}
-
-void Cle::OPENGL::Renderer::lightingPass()
-{
-	static auto shader = shaderCache["MeshShader"];
-	auto& instance = m_registry->ctx().get<Cle::Lighting*>();
-	auto& sunDir = instance->sunDirection;
-	float ambient = instance->ambient;
-	auto& backgroundColor = instance->backgroundColor;
-	auto& ambientColor = instance->ambientColor;
-
-	shader->Bind();
-	shader->setVec3("sunDirection", sunDir);
-	shader->setVec3("ambientColor", ambientColor);
-	shader->setVec3("backgroundColor", backgroundColor);
-	shader->setFloat("ambientAmount", ambient);
-	shader->setFloat("fogStart", instance->fogStart);
-
-
-}
-
-
-void Cle::OPENGL::Renderer::cleanDirtyMesh(entt::entity entity)
-{
-
-	auto& gmesh = m_registry->get<std::shared_ptr<GenericMesh>>(entity);
-
-	const std::shared_ptr<Cle::OPENGL::Mesh>& glmesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(getOrMakeMesh(gmesh));
-	if (gmesh->modelPathDirty || gmesh->modelIndexDirty)
-	{
-
-		const auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(gmesh->getModelPath());
-
-		uploadMesh(entity, ModelLoaded.at(gmesh->getMeshIndex()), *m_registry);
-		gmesh = m_registry->get<std::shared_ptr<GenericMesh>>(entity);
-
-		gmesh->indicesDirty = false;
-		gmesh->verticesDirty = false;
-		gmesh->modelPathDirty = false;
-		gmesh->modelIndexDirty = false;
-		gmesh->m_local_AABB.dirty = true;
-		gmesh->m_local_Bounding_Sphere.dirty = true;
-	}
-	if (gmesh->verticesDirty)
-	{
-		//glBindBuffer(GL_ARRAY_BUFFER,glmesh->m_VBO);
-		//glBufferSubData(GL_ARRAY_BUFFER, 0, gmesh->getVertices().size()*sizeof(Cle::Gfx::Vertex), gmesh->getVertices().data());
-		gmesh->verticesDirty = false;
-		gmesh->m_local_AABB.updateToWorld(gmesh->getVertices(), glm::mat4(1.0f));
-	}
-	if (gmesh->indicesDirty)
-	{
-		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,glmesh->m_EBO);
-		//glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, gmesh->getIndices().size() * sizeof(unsigned int), gmesh->getIndices().data());
-		gmesh->indicesDirty = false;
-		gmesh->m_local_AABB.updateToWorld(gmesh->getVertices(), glm::mat4(1.0f));
-	}
-		
-}
-
-void Cle::OPENGL::Renderer::onSceneLoaded()
-{
-	auto view = m_registry->view < std::shared_ptr<GenericMesh>, Cle::Components::Transform> ();
-	Cle::Gfx::Camera cam;
-
-	view.each([&](const entt::entity entity, std::shared_ptr<GenericMesh>& mesh, Cle::Components::Transform& transform)
-		{
-
-				m_registry->emplace_or_replace < std::shared_ptr<OPENGL::Shader>>(entity, std::static_pointer_cast<OPENGL::Shader>(getDefaultShader()));
-				//material.m_Shader = getDefaultShader();
-
-				const auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(mesh->getModelPath());
-
-				uploadMesh(entity, ModelLoaded.at(mesh->getMeshIndex()), *m_registry);
-
-				auto& nMesh = m_registry->get<std::shared_ptr<GenericMesh>>(entity);
-
-				//if (nMesh->gMesh->texture) nMesh->gMesh->texture = clientAssetHandler.getOrMakeTexture(nMesh->gMesh->texture->getPath());
-			//	if (material.getColorMap()) material.setColorMap(getOrMakeTexture(material.getColorMap()->getPath()));
-				drawMesh(entity, *m_registry,cam);
-
-
-		});
-}
 
 std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::assignLOD(entt::entity entity, glm::vec3 viewPosition)
 {
@@ -218,8 +143,8 @@ std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::assignLOD(entt::entity e
 	{
 		return openglmesh;
 	}
-	else if (distance < 50) return openglmesh;
-	else if (distance < 100) return openglmesh->getLodMesh(1);
+	else if (distance < 300* 300) return openglmesh;
+	else if (distance < 700* 700) return openglmesh->getLodMesh(1);
 	else   return openglmesh->getLodMesh(2);
 
 	/*auto lodmesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(getOrMakeMesh(std::make_shared<Cle::GenericMesh>(gmesh->getVertices(), imesh->LODIndicesEBOMap[ebo])));
@@ -259,6 +184,7 @@ std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::phraseSkybox(std::vec
 
 void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera)
 {
+
 	if (!registry.any_of < std::shared_ptr<IShader>>(e))
 	{
 		registry.emplace_or_replace<std::shared_ptr<Cle::OPENGL::Shader>>(e, std::static_pointer_cast<Cle::OPENGL::Shader>(getDefaultShader()));
@@ -268,18 +194,14 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 		 return;		
 	}
 	cleanDirtyMesh(e);
+
 	//Cle::Components::MaterialRef, 
 //	auto& material = registry.get<Cle::Components::MaterialRef>(e);
-
 	auto& shader = registry.get < std::shared_ptr < Cle::OPENGL::Shader >> (e);
 	auto& gmesh = registry.get<std::shared_ptr<GenericMesh>>(e);
 	auto& bounds = registry.get<Components::Bounds>(e);
 
-	if (!gmesh->gpuUploaded)
-	{
-		getOrMakeMesh(gmesh);
-	}
-	
+
 	auto mesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(getOrMakeMesh(gmesh));
 
 	auto& transform = registry.get<Cle::Components::Transform>(e);
@@ -298,7 +220,7 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 	shader->Bind();
 
 	glm::mat4& model = transform.model;
-	
+
 	if (transform.dirty)
 	{
 		bounds.aabb.dirty = true;

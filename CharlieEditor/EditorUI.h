@@ -5,10 +5,10 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "GfxBase.h"
 #include "imguizmo/imguizmo.h"
-#include "Components/Transform.h"
+#include "CharlieEngine/Transform.h"
 #include <glm/gtc/type_ptr.hpp>
 #include "Camera.h"
-#include "Components/Components.h"
+#include "CharlieEngine/Components.h"
 #include <vector>
 #include<iostream>
 #include "World.h"

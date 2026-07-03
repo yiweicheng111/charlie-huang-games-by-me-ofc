@@ -17,10 +17,12 @@
 #include "glm/glm.hpp"
 #include <optional>
 #include "entt/entt.hpp"
-#include "Components/Transform.h"
-
+#include "CharlieEngine/Transform.h"
+#include <string>
+#include <functional>
 namespace Cle::Components
 {
+	
 	struct Color
 	{
 
@@ -36,7 +38,6 @@ namespace Cle::Components
 			ar(value);
 		}
 	};
-
 	class Name
 	{
 	private:
@@ -110,6 +111,7 @@ namespace Cle::Components
 		}
 		void removeChild(entt::entity other, entt::registry* registry)
 		{
+
 			auto& childtree = registry->get<TreeInfo>(other);
 			auto it = std::find(Children.begin(), Children.end(), other);
 			if (it == Children.end()) return;
@@ -117,25 +119,18 @@ namespace Cle::Components
 			childtree.parent = entt::null;
 			
 		}
-	
-	};
-	
-	struct MaterialRef
-	{
-		std::string name{};
-		std::string colorMapPath{};
-		glm::vec4 color;
 		template <class Archive>
 		void save(Archive& ar) const
 		{
-			ar(name, colorMapPath,color);
+			ar(parent);
 		}
 		template <class Archive>
 		void load(Archive& ar)
 		{
-			ar(name, colorMapPath,color);
+			ar(parent);
 		}
 	};
+
 }
 
 namespace glm
@@ -167,10 +162,72 @@ namespace glm
 }
 namespace Cle
 {
+	//struct Dirty {};
+	struct TextureRef
+	{
+		std::string path;
+		bool operator==(const TextureRef& other) const
+		{
+			return path == other.path;
+		}
+	};
+
+	struct MaterialRef
+	{
+		std::string name{};
+		std::string colorMapPath{};
+		glm::vec4 color;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(name, colorMapPath, color);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(name, colorMapPath, color);
+		}
+	};
+	struct MeshPacket
+	{
+		std::string path{};
+		int meshIndex;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(meshIndex, path);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(meshIndex, path);
+		}
+	};
+	enum ServerMessage
+	{
+		OnJoin,
+	};
+	struct Header
+	{
+		ServerMessage msg;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar((int)msg);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(msg);
+		}
+	};
+	struct Replicated {};
+
 	struct networkID 
 	{
 		int value;
-
+		networkID() = default;
+		networkID(int v) : value(v) {}
 		template <class Archieve>
 		void save(Archieve& ar) const
 		{
@@ -185,27 +242,33 @@ namespace Cle
 
 		}
 	};
-	class EntityPacket
+	struct EntityPacket
 	{
-	public:
-		networkID m_networkID;
-		std::optional<Cle::Components::Transform> transform;
-		//std::optional<MeshPacket> mesh;
-		std::optional<Cle::Components::Name> name;
-		//std::optional<MaterialPacket> material;
-
+		networkID netID;
+		std::optional < Cle::Components::Color> color;
+		std::optional <MeshPacket> mesh;
+		std::optional <Cle::Components::Transform> transform;
+		std::optional <Cle::Components::TreeInfo> treeinfo;
 		template <class Archieve>
 		void save(Archieve& ar) const
 		{
-			ar(m_networkID, transform);
+			ar(netID,color,mesh,transform,treeinfo);
 
 		}
 		template <class Archieve>
 
 		void load(Archieve& ar)
 		{
-			ar(m_networkID, transform);
+			ar(netID, color, mesh, transform, treeinfo);
 
+		}
+	};
+}
+namespace std {
+	template <>
+	struct hash<Cle::TextureRef> {
+		std::size_t operator()(const Cle::TextureRef& t) const noexcept {
+			return std::hash<std::string>{}(t.path);
 		}
 	};
 }

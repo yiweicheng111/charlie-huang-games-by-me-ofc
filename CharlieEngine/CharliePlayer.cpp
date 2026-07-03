@@ -52,6 +52,7 @@ Cle::RunnableApplication::RunnableApplication()
 
 	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	m_camera = Camera(glm::radians(70.0f), 1);
+	m_network = Network(&registry);
 	/*
 		player = World.CreateDebugObject({}, {});
 		registry.get<Cle::Components::Transform>(player).setScale({ 1,1,1 });*/

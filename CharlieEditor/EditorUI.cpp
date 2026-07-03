@@ -203,11 +203,12 @@ namespace Cle::Editor
 				int mindex = gmesh->getMeshIndex();
 				if (ImGui::InputText("Model path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					gmesh->setModelPath(path);
+					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh->getMeshIndex()),*m_registry);
 				}
 				if (ImGui::DragInt("Model mesh index", &mindex) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					gmesh->setMeshIndex(mindex);
+					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex),*m_registry);
+
 				}
 				
 				ImGui::TreePop();

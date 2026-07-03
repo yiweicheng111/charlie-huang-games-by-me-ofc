@@ -9,8 +9,8 @@
 #include <iostream>
 #include "OPENGL4/LightBuffer.h"
 #include "shared.h"
-#include "CharlieEngine/CharlieCore/CharliePlayer.h"
-#include "CharlieCore/AssetHandler.h"
+#include "CharlieEngine/CharliePlayer.h"
+#include "CharlieEngine/AssetHandler.h"
 using Vertex = Cle::Gfx::Vertex;
 std::vector<Vertex> vertices = {
 	Vertex({-0.5f,-0.5f,0.0f},{0.0f,0.0f},{0.0f,0.0f,0.0f}),
@@ -31,17 +31,18 @@ int main() {
 	//std::filesystem::current_path("../");
 
 	std::cout << std::filesystem::current_path() << std::endl;;
-	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/w.gltf");
+	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
 	//const std::vector< Cle::GenericMesh>& ModelLoaded = app.renderer->m_AssetHandler.LoadModel("map/d.obj");
 
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
 	int i = 0;
 	entt::entity floor;
+/*
 
 	for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
-	
+
 		auto e = app.World->CreateDebugObject(I);
 		if (i == 0)
 		{
@@ -50,16 +51,19 @@ int main() {
 			app.registry.get<std::shared_ptr<Cle::Audio::Sound>>(e)->Play();
 			app.m_UIHandler.m_Focused_Entity = floor;
 		}
-	
+		else {
+			app.registry.get<Cle::Components::Color>(e).value = glm::vec4(I->assimpRequestedColor, 1);
+			app.registry.get<Cle::Components::TreeInfo>(e).setParent(e, floor, &app.registry);
+		}
 		//app.registry.get<Cle::Components::MaterialRef>(e).usesColorMap = false;
-		app.registry.get<Cle::Components::Color>(e).value = glm::vec4(I->assimpRequestedColor ,1);
+
 
 		//app.registry.get<Cle::Gfx::Material>(e).setColorMap(Cle::OPENGL::Texture(bat.ID));
 		//if (!gm.assimpRequestedDiffuse.empty()) gm.texture = app.renderer->createTexture(gm.assimpRequestedDiffuse);
 
 		i++;
 
-	}
+	}*/
 
 	//Cle::Physics::Physics1::reg(app.registry);
 	//Cle::Physics::Physics1::physicssystem->GetBodyInterface().SetMotionType(app.registry.get<Cle::Components::PhysicsComponent>(floor).ID, JPH::EMotionType::Static, JPH::EActivation::Activate);

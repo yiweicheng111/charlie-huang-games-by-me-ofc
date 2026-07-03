@@ -18,8 +18,7 @@ target_include_directories(CharlieEditor PUBLIC
     "${PROJECT_SOURCE_DIR}/Renderer/GfxBase"
     "${PROJECT_SOURCE_DIR}/Renderer/GfxRenderer"
     "${PROJECT_SOURCE_DIR}/CharlieEngine"
-    "${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore"
-    "${PROJECT_SOURCE_DIR}/CharlieEngine/CharlieCore/Components"
+    "${PROJECT_SOURCE_DIR}/CharlieEngine"
     "${PROJECT_SOURCE_DIR}/Library/vendor/enet/include"
      "${PROJECT_SOURCE_DIR}/Renderer"
    	

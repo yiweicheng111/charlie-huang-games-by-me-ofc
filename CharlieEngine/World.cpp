@@ -26,8 +26,9 @@ entt::entity Cle::World::CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMe
 	renderer.uploadMesh(charlie, GMesh, *registry);
 
 	auto& m = registry->get<std::shared_ptr<GenericMesh>>(charlie);
-	t.setPosition(m->offset);
-	t.setScale(t.getScale() * m->scaleOffset);
+	t.setPosition(m->positionOffset);
+	t.setScale(m->scaleOffset);
+	t.setOrientation(m->orientationOffset);
 
 	return charlie;
 
@@ -63,16 +64,13 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 }
 
 
-void Cle::World::DestroyObject(entt::entity existing)
+void Cle::World::DestroyObject(entt::registry& registry,entt::entity existing)
 {
 	deleteObjectCallback();
 
-	if (!registry->valid(existing)) return;
-
-	if (registry->any_of<TreeInfo>(registry->get<TreeInfo>(existing).getParent())) {
-		registry->get<TreeInfo>(registry->get<TreeInfo>(existing).getParent()).removeChild(existing, registry);
+	if (registry.any_of<TreeInfo>(existing) && registry.valid(registry.get<TreeInfo>(existing).getParent()) && registry.any_of<TreeInfo>(registry.get<TreeInfo>(existing).getParent())) {
+		registry.get<TreeInfo>(registry.get<TreeInfo>(existing).getParent()).removeChild(existing, &registry);
 	}
-	registry->destroy(existing);
 }
 
 
