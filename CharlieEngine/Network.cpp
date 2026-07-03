@@ -59,7 +59,6 @@ void Cle::Network::poll()
             using namespace Cle::Components;
             if (header.msg == ServerMessage::OnJoin)
             {
-
                 std::vector<EntityPacket> packets;
                 ar(packets);
 
@@ -68,9 +67,10 @@ void Cle::Network::poll()
                 for (auto& p : packets)
                 {
                     entt::entity e = registry->create();
+                    registry->emplace<TreeInfo>(e);
 
                     registry->emplace<networkID>(e, p.netID);
-
+                    entitytonetworkID[e] = p.netID.value;
                     if (p.transform)
                         registry->emplace<Transform>(e, *p.transform);
 
@@ -92,6 +92,8 @@ void Cle::Network::poll()
             }
             if (onSceneLoaded) onSceneLoaded();
             enet_packet_destroy(event.packet);
+            std::cout << "joined and loaded game\n";
+
             break;
         }
 		}
