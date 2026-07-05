@@ -31,16 +31,16 @@ int main() {
 	//std::filesystem::current_path("../");
 
 	std::cout << std::filesystem::current_path() << std::endl;;
-	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
+	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/g.gltf");
 	//const std::vector< Cle::GenericMesh>& ModelLoaded = app.renderer->m_AssetHandler.LoadModel("map/d.obj");
 
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
 	int i = 0;
 	entt::entity floor;
-/*
 
-	for (auto& I : ModelLoaded) {
+
+	/*for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
 
 		auto e = app.World->CreateDebugObject(I);

@@ -21,11 +21,11 @@ namespace Cle
 			enet_host_destroy(host);
 		}
 		Server(int port);
-		void loadGame(std::string path);
 		void updateTransform(entt::registry& registry,entt::entity entity);
 		void updateMesh(entt::registry& registry, entt::entity entity);
+		void sendDirtyTransforms(ENetEvent& event);
 		void onJoin(ENetPeer* peer);
-		void Broadcast();
+		void run();
 		
 	};
 }

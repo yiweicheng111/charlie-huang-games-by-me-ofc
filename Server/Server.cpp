@@ -26,7 +26,34 @@ void Cle::Server::updateMesh(entt::registry& registry, entt::entity entity)
 {
 	dirtyMeshes.insert(entity);
 }
-void Cle::Server::Broadcast()
+void Cle::Server::sendDirtyTransforms(ENetEvent& event)
+{
+	std::vector<EntityPacket> packets;
+
+	for (const auto& entity : dirtyTransforms)
+	{
+		if (!registry.valid(entity) || !registry.any_of<Cle::Components::Transform>(entity)) continue;
+
+		EntityPacket entityp;
+		if (!registry.any_of<networkID>(entity))
+		{
+			registry.emplace<networkID>(entity, (int)entity);
+			entityp.netID = registry.get<networkID>(entity);
+		}
+		entityp.transform = registry.get<Cle::Components::Transform>(entity);
+		packets.push_back(entityp);
+	}
+	std::ostringstream oss(std::ios::binary);
+	{
+		cereal::BinaryOutputArchive ar(oss);
+		ar(Cle::Header{ ServerMessage::UpdateEntity });
+		ar(packets);
+	}
+	ENetPacket* packet = enet_packet_create(oss.str().data(), oss.str().size(), ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(event.peer, 0, packet);
+	dirtyTransforms.clear();
+}
+void Cle::Server::run()
 {
 	ENetEvent event;
 	while (running)
@@ -35,11 +62,12 @@ void Cle::Server::Broadcast()
 		{
 			switch (event.type)
 			{
-			case ENET_EVENT_TYPE_CONNECT:
-			{
-				onJoin(event.peer);
+				case ENET_EVENT_TYPE_CONNECT:
+				{
+					onJoin(event.peer);
+				}
 			}
-			}
+			if (dirtyTransforms.size() > 0) sendDirtyTransforms(event);
 		}
 	}
 }
@@ -62,7 +90,7 @@ void Cle::Server::onJoin(ENetPeer* peer)
 			{
 				entityp.transform = registry.get<Cle::Components::Transform>(ent);
 			}
-		
+
 			if (registry.any_of<Cle::Components::Color>(ent))
 			{
 				entityp.color = registry.get<Cle::Components::Color>(ent);
@@ -72,6 +100,20 @@ void Cle::Server::onJoin(ENetPeer* peer)
 				auto& gmesh = registry.get<std::shared_ptr<GenericMesh>>(ent);
 				entityp.mesh = MeshPacket({gmesh->getModelPath(),gmesh->getMeshIndex()});
 			}
+			if (registry.any_of<Components::TreeInfo>(ent))
+			{
+				auto parent = registry.get<Components::TreeInfo>(ent).getParent();
+				if (registry.valid(parent))
+				{
+					auto parentid = registry.get<networkID>(parent).value;
+					entityp.treeinfo = TreeInfoPacket(parentid);
+				}
+				else
+				{
+					entityp.treeinfo = TreeInfoPacket(-1);
+				}
+			
+			}
 			packets.push_back(entityp);
 		
 		}
@@ -79,7 +121,8 @@ void Cle::Server::onJoin(ENetPeer* peer)
 		ar(packets);
 		ENetPacket* packet = enet_packet_create(oss.str().data(), oss.str().size(), ENET_PACKET_FLAG_RELIABLE);
 		enet_peer_send(peer, 0, packet);
-		
+		std::cout << "send\n";
+
 	}
 }
 
@@ -91,8 +134,15 @@ int main()
 	for (auto e : registry.view<Cle::Components::Name>())
 	{
 		registry.emplace<Replicated>(e);
+		if (registry.any_of<Components::Transform>(e))
+		{
+			auto& t = registry.get<Components::Transform>(e);
+			registry.patch<Components::Transform>(e, [](Components::Transform& t){
+				t.setScale({ 1,1,1 });
+				});
+		}
 
 	}
-	s.Broadcast();
+	s.run();
 	return 0;
 }

@@ -75,6 +75,8 @@ namespace Cle::Components
 		entt::entity parent = entt::null;
 		std::vector<entt::entity> Children;
 	public:
+		unsigned int loadingParentID;
+		TreeInfo() = default;
 		const std::vector<entt::entity>& getChildren() const
 		{
 			return Children;
@@ -85,7 +87,10 @@ namespace Cle::Components
 		}
 		void setParent(entt::entity you, entt::entity other, entt::registry* registry)
 		{
-			if (!registry->any_of<TreeInfo>(other)) return;
+			if (!registry->any_of<TreeInfo>(other)) {
+				std::cout << "no treeinfo on parent\n";
+				return;
+			}
 			auto& parenttree = registry->get<TreeInfo>(other);
 			if (registry->valid(parent))
 			{
@@ -206,6 +211,7 @@ namespace Cle
 	enum ServerMessage
 	{
 		OnJoin,
+		UpdateEntity,
 	};
 	struct Header
 	{
@@ -242,13 +248,32 @@ namespace Cle
 
 		}
 	};
+	struct TreeInfoPacket
+	{
+		int parentNetID{};
+		TreeInfoPacket() = default;
+		TreeInfoPacket(int ID) : parentNetID(ID) {}
+		template <class Archieve>
+		void save(Archieve& ar) const
+		{
+			ar(parentNetID);
+
+		}
+		template <class Archieve>
+
+		void load(Archieve& ar)
+		{
+			ar(parentNetID);
+
+		}
+	};
 	struct EntityPacket
 	{
 		networkID netID;
 		std::optional < Cle::Components::Color> color;
 		std::optional <MeshPacket> mesh;
 		std::optional <Cle::Components::Transform> transform;
-		std::optional <Cle::Components::TreeInfo> treeinfo;
+		std::optional <TreeInfoPacket> treeinfo;
 		template <class Archieve>
 		void save(Archieve& ar) const
 		{

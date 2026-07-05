@@ -11,7 +11,7 @@ namespace Cle
 		ENetPeer* server = nullptr;
 		entt::registry* registry = nullptr;
 		std::function<void()> onSceneLoaded;
-		std::unordered_map< entt::entity, unsigned int> entitytonetworkID;
+		std::unordered_map< unsigned int,entt::entity> netIDtoEntity;
 		~Network()
 		{
 			if (client) enet_host_destroy(client);

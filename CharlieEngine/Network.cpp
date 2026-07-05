@@ -3,46 +3,46 @@
 #include "shared.h"
 void Cle::Network::connectServer(int port, std::string ip)
 {
-	enet_initialize();
+    enet_initialize();
 
-	ENetAddress address;
+    ENetAddress address;
 
-	client = enet_host_create(NULL, 1, 2, 0, 0);
-	if (!client)
-	{
-		std::cout << "cant create client\n";
-		return;
-	}
-	enet_address_set_host(&address, ip.c_str());
-	address.port = port;
-	server = enet_host_connect(client, &address, 2, 1);
-	if (!server)
-	{
-		std::cout << "server full\n";
-		enet_host_destroy(client);
-		return;
-	}
+    client = enet_host_create(NULL, 1, 2, 0, 0);
+    if (!client)
+    {
+        std::cout << "cant create client\n";
+        return;
+    }
+    enet_address_set_host(&address, ip.c_str());
+    address.port = port;
+    server = enet_host_connect(client, &address, 2, 1);
+    if (!server)
+    {
+        std::cout << "server full\n";
+        enet_host_destroy(client);
+        return;
+    }
 
-	ENetEvent event;
-	if (enet_host_service(client, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
-	{
-		std::cout << "connected\n";
-	}
-	else
-	{
-		std::cout << "connection timed out\n";
-	}
+    ENetEvent event;
+    if (enet_host_service(client, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
+    {
+        std::cout << "connected\n";
+    }
+    else
+    {
+        std::cout << "connection timed out\n";
+    }
 }
 
 void Cle::Network::poll()
 {
-	ENetEvent event;
-	while (enet_host_service(client, &event, 0) > 0)
-	{
-		std::cout << "polling for server\n";
-		if (!client || !server) continue;
-		switch (event.type)
-		{
+    ENetEvent event;
+    while (enet_host_service(client, &event, 0) > 0)
+    {
+        std::cout << "polling for server\n";
+        if (!client || !server) continue;
+        switch (event.type)
+        {
         case ENET_EVENT_TYPE_RECEIVE:
         {
             std::string bytes(
@@ -57,26 +57,48 @@ void Cle::Network::poll()
             ar(header);
             using namespace Cle;
             using namespace Cle::Components;
-            if (header.msg == ServerMessage::OnJoin)
+            std::vector<EntityPacket> packets;
+
+            if (header.msg == ServerMessage::UpdateEntity)
             {
-                std::vector<EntityPacket> packets;
+                ar(packets);
+                for (auto& p : packets)
+                {
+                    auto entity = netIDtoEntity[p.netID.value];
+                    if (!registry->valid(entity)) continue;
+                    if (p.transform && registry->any_of<Transform>(entity))
+                    {
+                       auto& t = registry->get<Transform>(entity);
+                       t.setOrientation(p.transform->getOrientation());
+                       t.setPosition(p.transform->getPosition());
+                       t.setScale(p.transform->getScale());
+
+                    }
+                }
+            }
+            else if (header.msg == ServerMessage::OnJoin)
+            {
                 ar(packets);
 
                 registry->clear();
-
+                netIDtoEntity.clear();
                 for (auto& p : packets)
                 {
                     entt::entity e = registry->create();
-                    registry->emplace<TreeInfo>(e);
 
                     registry->emplace<networkID>(e, p.netID);
-                    entitytonetworkID[e] = p.netID.value;
+                    netIDtoEntity[p.netID.value] = e;
                     if (p.transform)
                         registry->emplace<Transform>(e, *p.transform);
 
                     if (p.color)
                         registry->emplace<Color>(e, *p.color);
-            
+                    if (p.treeinfo)
+                    {
+                        auto& tree = registry->emplace<TreeInfo>(e);
+                        tree.loadingParentID = p.treeinfo->parentNetID;
+                    }
+
 
                     if (p.mesh)
                     {
@@ -86,17 +108,27 @@ void Cle::Network::poll()
                         );
 
                         registry->emplace<std::shared_ptr<GenericMesh>>(e, mesh);
-                        
+
                     }
                 }
+                for (auto ent : registry->view<TreeInfo>())
+                {
+                    auto& tree = registry->get<TreeInfo>(ent);
+                    if (tree.loadingParentID == -1) continue;
+                    auto& parent = netIDtoEntity[tree.loadingParentID];
+                        
+                    tree.setParent(ent, parent, registry);
+                }
             }
+      
             if (onSceneLoaded) onSceneLoaded();
             enet_packet_destroy(event.packet);
             std::cout << "joined and loaded game\n";
-
+         
             break;
+         
         }
-		}
-      
-	}
+        }
+
+    }
 }
