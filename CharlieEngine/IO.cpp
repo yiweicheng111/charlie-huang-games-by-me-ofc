@@ -21,6 +21,8 @@ void Cle::gameIO::Snapshot(std::string path)
 	     .get<Cle::Components::Transform>(arch)
 		.get<std::shared_ptr<GenericMesh>>(arch)
 		.get<Cle::MaterialRef>(arch)
+		.get<Replicated>(arch).get<ServerOnly>(arch).get<ClientOnly>(arch)
+
 		//.get<std::shared_ptr<Cle::Gfx::ITexture>>(arch)
 		.get<Cle::Components::Color>(arch)
 		.get<Cle::Components::Name>(arch);
@@ -45,6 +47,7 @@ void Cle::gameIO::LoadFile(std::string path)
 		.get<Cle::Components::Transform>(arch)
 		.get<std::shared_ptr<GenericMesh>>(arch)
 		.get<Cle::MaterialRef>(arch)
+		.get<Replicated>(arch).get<ServerOnly>(arch).get<ClientOnly>(arch)
 	//	.get<std::shared_ptr<Cle::Gfx::ITexture>>(arch)
 		.get<Cle::Components::Color>(arch)
 		.get<Cle::Components::Name>(arch).orphans();

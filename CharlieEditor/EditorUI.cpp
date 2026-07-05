@@ -8,7 +8,7 @@ using namespace Cle::Components;
 
 namespace Cle::Editor
 {
-	EditorUI::EditorUI(Cle::World* World ,GLFWwindow* m_window, Cle::Gfx::Camera* m_camera) :m_camera(m_camera), m_window(m_window), m_registry(World->registry), World(World)
+	EditorUI::EditorUI(Cle::World* World, GLFWwindow* m_window, Cle::Gfx::Camera* m_camera) :m_camera(m_camera), m_window(m_window), m_registry(World->registry), World(World)
 	{
 		ImGui::CreateContext();
 		io = &ImGui::GetIO();
@@ -20,7 +20,7 @@ namespace Cle::Editor
 		ImGuiStyle& style = ImGui::GetStyle();
 		ImGui::StyleColorsLight();
 		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
-		style.Colors[ImGuiCol_Text] = ImVec4(0.1,0.1,0.1, 1.0);
+		style.Colors[ImGuiCol_Text] = ImVec4(0.1, 0.1, 0.1, 1.0);
 		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
 		style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.8, 0.8, 0.8, 1.0);
 		style.WindowRounding = 5.0f;
@@ -28,7 +28,7 @@ namespace Cle::Editor
 			ImGui_ImplGlfw_InitForOpenGL(m_window, true);
 			ImGui_ImplOpenGL3_Init("#version 330 core");
 		}
-		
+
 	}
 	void EditorUI::DrawChildren(entt::entity parent)
 	{
@@ -55,38 +55,38 @@ namespace Cle::Editor
 	}
 	void EditorUI::DrawExplorer()
 	{
-			
-			ImGui::Begin("Explorer");
-			if (ImGui::TreeNodeEx("World", ImGuiTreeNodeFlags_DefaultOpen))
+
+		ImGui::Begin("Explorer");
+		if (ImGui::TreeNodeEx("World", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			for (auto e : m_registry->view<TreeInfo>())
 			{
-				for (auto e : m_registry->view<TreeInfo>())
-				{  
-					if (m_registry->get<TreeInfo>(e).getParent() != entt::null) continue;
-					if (!m_registry->any_of<Name>(e)) m_registry->emplace<Name>(e, "Untitled Object");
-					ImGui::PushID((int)e);
+				if (m_registry->get<TreeInfo>(e).getParent() != entt::null) continue;
+				if (!m_registry->any_of<Name>(e)) m_registry->emplace<Name>(e, "Untitled Object");
+				ImGui::PushID((int)e);
 
-					if (m_Focused_Entity == e) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
-					else ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8, 0.8, 0.8, 1.0));
-					bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).getName().c_str(), ImGuiTreeNodeFlags_Framed);
+				if (m_Focused_Entity == e) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
+				else ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8, 0.8, 0.8, 1.0));
+				bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).getName().c_str(), ImGuiTreeNodeFlags_Framed);
 
-					DrawContextMenu(e);
-					if (open && ImGui::IsItemToggledOpen())
-					{
-						m_Focused_Entity = e;						
-					}
-					if (open)
-					{
-						DrawChildren(e);
-						ImGui::TreePop();
-					}
-
-					ImGui::PopStyleColor();
-
-					ImGui::PopID();
+				DrawContextMenu(e);
+				if (open && ImGui::IsItemToggledOpen())
+				{
+					m_Focused_Entity = e;
 				}
-				ImGui::TreePop();
+				if (open)
+				{
+					DrawChildren(e);
+					ImGui::TreePop();
+				}
+
+				ImGui::PopStyleColor();
+
+				ImGui::PopID();
 			}
-			ImGui::End();
+			ImGui::TreePop();
+		}
+		ImGui::End();
 
 	}
 	void EditorUI::DrawProperties()
@@ -96,12 +96,12 @@ namespace Cle::Editor
 			return;
 		}
 		ImGui::Begin("Properties");
-		Transform* transform =	m_registry->try_get<Transform>(m_Focused_Entity);
+		Transform* transform = m_registry->try_get<Transform>(m_Focused_Entity);
 		LightComponent* lightComponent = m_registry->try_get<LightComponent>(m_Focused_Entity);
 		Color* color = m_registry->try_get<Color>(m_Focused_Entity);
 		auto mesh = m_registry->try_get<std::shared_ptr<Cle::GenericMesh>>(m_Focused_Entity);
 		std::shared_ptr<Cle::Audio::Sound>* soundptr = m_registry->try_get<std::shared_ptr<Cle::Audio::Sound>>(m_Focused_Entity);
-		
+
 		Cle::Components::CubeMapTexture* cubeMap = m_registry->try_get<Cle::Components::CubeMapTexture>(m_Focused_Entity);
 		if (soundptr)
 		{
@@ -150,7 +150,7 @@ namespace Cle::Editor
 				{
 					transform->setScale(scale);
 
-				}				
+				}
 
 				ImGui::TreePop();
 
@@ -198,22 +198,44 @@ namespace Cle::Editor
 				std::string texturePath;
 				std::string modelPath;
 				auto gmesh = m_registry->get<std::shared_ptr<GenericMesh>>(m_Focused_Entity);
-			//	texturePath = gmesh->texture ? gmesh->texture->getPath()  : "null";
+				//	texturePath = gmesh->texture ? gmesh->texture->getPath()  : "null";
 				std::string path = gmesh->getModelPath();
 				int mindex = gmesh->getMeshIndex();
 				if (ImGui::InputText("Model path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh->getMeshIndex()),*m_registry);
+					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh->getMeshIndex()), *m_registry);
 				}
 				if (ImGui::DragInt("Model mesh index", &mindex) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex),*m_registry);
+					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex), *m_registry);
 
 				}
-				
+
 				ImGui::TreePop();
 
 			}
+		}
+		if (ImGui::TreeNodeEx("Network Visibility", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			if (ImGui::RadioButton("Client", m_registry->any_of<ClientOnly>(m_Focused_Entity)))
+			{
+				m_registry->emplace_or_replace< ClientOnly>(m_Focused_Entity);
+				m_registry->remove<Replicated>(m_Focused_Entity);
+				m_registry->remove<ServerOnly>(m_Focused_Entity);
+			}
+			if (ImGui::RadioButton("Server", m_registry->any_of<ServerOnly>(m_Focused_Entity)))
+			{
+				m_registry->emplace_or_replace< ServerOnly>(m_Focused_Entity);
+				m_registry->remove<Replicated>(m_Focused_Entity);
+				m_registry->remove<ClientOnly>(m_Focused_Entity);
+			}
+			if (ImGui::RadioButton("Replicated", m_registry->any_of<Replicated>(m_Focused_Entity)))
+			{
+				m_registry->emplace_or_replace<Replicated>(m_Focused_Entity);
+				m_registry->remove<ClientOnly>(m_Focused_Entity);
+				m_registry->remove<ServerOnly>(m_Focused_Entity);
+			}
+			ImGui::TreePop();
 		}
 		ImGui::End();
 	}
@@ -228,7 +250,7 @@ namespace Cle::Editor
 	void EditorUI::DrawContextMenu(entt::entity e)
 	{
 		if (e == entt::null) return;
-		if (ImGui::BeginPopupContextItem(("context"+std::to_string((int)e)).c_str()))
+		if (ImGui::BeginPopupContextItem(("context" + std::to_string((int)e)).c_str()))
 		{
 			if (ImGui::MenuItem("Copy"))
 			{
@@ -272,11 +294,11 @@ namespace Cle::Editor
 		int width, height;
 		glfwGetWindowSize(m_window, &width, &height);
 		ImGuizmo::SetRect(
-			0,0,
+			0, 0,
 			width,
 			height
 		);
-		
+
 		glm::mat4 modelCopy = transform->model;
 		ImGuizmo::Manipulate(
 			glm::value_ptr(m_camera->getViewMatrix()),
@@ -291,7 +313,7 @@ namespace Cle::Editor
 			transform->setScale(nscale);  transform->setOrientation(glm::radians(nrot)); transform->setPosition(npos);
 			transform->dirty = true;
 		}
-	
+
 	}
 	void EditorUI::Update()
 	{
@@ -309,5 +331,5 @@ namespace Cle::Editor
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
-	
+
 }

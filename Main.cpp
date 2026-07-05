@@ -32,7 +32,6 @@ int main() {
 
 	std::cout << std::filesystem::current_path() << std::endl;;
 	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/g.gltf");
-	//const std::vector< Cle::GenericMesh>& ModelLoaded = app.renderer->m_AssetHandler.LoadModel("map/d.obj");
 
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
@@ -40,7 +39,7 @@ int main() {
 	entt::entity floor;
 
 
-	/*for (auto& I : ModelLoaded) {
+	for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
 
 		auto e = app.World->CreateDebugObject(I);
@@ -63,7 +62,7 @@ int main() {
 
 		i++;
 
-	}*/
+	}
 
 	//Cle::Physics::Physics1::reg(app.registry);
 	//Cle::Physics::Physics1::physicssystem->GetBodyInterface().SetMotionType(app.registry.get<Cle::Components::PhysicsComponent>(floor).ID, JPH::EMotionType::Static, JPH::EActivation::Activate);

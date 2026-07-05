@@ -22,6 +22,7 @@ entt::entity Cle::World::CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMe
 	registry->emplace<Cle::Components::Transform>(charlie);
 	auto& t = registry->get<Cle::Components::Transform>(charlie);
 	registry->emplace<Cle::Components::Name>(charlie, "charlie");
+	registry->emplace<Replicated>(charlie);
 
 	renderer.uploadMesh(charlie, GMesh, *registry);
 
@@ -54,6 +55,15 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 	}
 	if (registry->any_of<TreeInfo>(existing)) {
 		registry->emplace<TreeInfo>(newent, registry->get<TreeInfo>(existing));
+	}
+	if (registry->any_of<Replicated>(existing)) {
+		registry->emplace<Replicated>(newent);
+	}
+	if (registry->any_of<ServerOnly>(existing)) {
+		registry->emplace<ServerOnly>(newent);
+	}
+	if (registry->any_of<ClientOnly>(existing)) {
+		registry->emplace<ClientOnly>(newent);
 	}
 	if (registry->any_of< std::shared_ptr<Cle::Audio::Sound>>(existing)) {
 		auto& audio = registry->get< std::shared_ptr<Cle::Audio::Sound>>(existing);

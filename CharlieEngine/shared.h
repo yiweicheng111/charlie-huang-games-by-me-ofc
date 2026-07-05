@@ -228,7 +228,8 @@ namespace Cle
 		}
 	};
 	struct Replicated {};
-
+	struct ServerOnly {};
+	struct ClientOnly {};
 	struct networkID 
 	{
 		int value;
