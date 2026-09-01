@@ -20,9 +20,46 @@
 #include "CharlieEngine/Transform.h"
 #include <string>
 #include <functional>
+#include "reactphysics3d/reactphysics3d.h"
+
 namespace Cle::Components
 {
+
+	struct PhysicsComponent
+	{
+		static reactphysics3d::Vector3 glmtorp3dvec3(const glm::vec3& vec)
+		{
+			return reactphysics3d::Vector3(vec.x, vec.y, vec.z);
+		}
+		static glm::quat rp3dtoglmquat(const  reactphysics3d::Quaternion& quat)
+		{
+			return glm::quat(quat.w, quat.x, quat.y, quat.z);
+		}
+		static reactphysics3d::Quaternion glmtorp3dquat(const glm::quat& quat)
+		{
+			return reactphysics3d::Quaternion(quat.x, quat.y, quat.z, quat.w);
+		}
+		static glm::vec3 rp3dtoglmvec3(const reactphysics3d::Vector3& vec)
+		{
+			return glm::vec3(vec.x, vec.y, vec.z);
+		}
 	
+		reactphysics3d::RigidBody* body;
+		reactphysics3d::PhysicsCommon* physicsCommon;
+		reactphysics3d::PhysicsWorld* physicsWorld;
+		PhysicsComponent(reactphysics3d::PhysicsCommon* pc, reactphysics3d::PhysicsWorld* world, reactphysics3d::CollisionShapeName name, Transform t) : physicsCommon(pc), physicsWorld(world)
+		{
+
+			if (name == reactphysics3d::CollisionShapeName::BOX)
+			{
+				body = world->createRigidBody(reactphysics3d::Transform(glmtorp3dvec3(t.getPosition()), glmtorp3dquat(t.getOrientation())));
+				body->addCollider(pc->createBoxShape(glmtorp3dvec3(t.getScale()) / 2.0f), reactphysics3d::Transform::identity());
+
+				body->setType(reactphysics3d::BodyType::STATIC);
+
+			}
+		}
+	};
 	struct Color
 	{
 
@@ -116,12 +153,16 @@ namespace Cle::Components
 		}
 		void removeChild(entt::entity other, entt::registry* registry)
 		{
-
 			auto& childtree = registry->get<TreeInfo>(other);
 			auto it = std::find(Children.begin(), Children.end(), other);
 			if (it == Children.end()) return;
 			Children.erase(it);
-			childtree.parent = entt::null;
+			if (registry->valid(other) and registry->any_of<TreeInfo>(other))
+			{
+				
+				childtree.parent = entt::null;
+			}
+			
 			
 		}
 		template <class Archive>
@@ -208,14 +249,48 @@ namespace Cle
 			ar(meshIndex, path);
 		}
 	};
-	enum ServerMessage
+	struct KeyPacket
+	{
+		unsigned char vk;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(vk);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(vk);
+		}
+	};
+	struct MovementPacket
+	{
+		bool vk[5] = { false };
+		glm::vec3 forward;
+		glm::vec3 right;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(vk, forward, right);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(vk,forward,right);
+		}
+	};
+	enum NetworkMessage : int
 	{
 		OnJoin,
 		UpdateEntity,
+		Input,
+		MovementKey,
+		UpdateCamera,
 	};
+
 	struct Header
 	{
-		ServerMessage msg;
+		int msg;
 		template <class Archive>
 		void save(Archive& ar) const
 		{

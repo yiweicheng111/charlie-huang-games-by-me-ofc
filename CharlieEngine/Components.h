@@ -91,7 +91,7 @@ namespace Cle::Components
 	};
 	struct CubeMapTexture
 	{
-		std::vector<std::string> faces;
+		std::vector<std::string> faces = std::vector<std::string>(6,"sky.jpg");
 	};
 	struct Bounds
 	{

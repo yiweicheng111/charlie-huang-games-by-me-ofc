@@ -10,13 +10,18 @@ Cle::Gfx::Camera::Camera(float fov, float aspect)
 	this->fov = fov;
 	this->aspect = aspect;
 	Position = { 0,0,0 };
-	View = glm::lookAt(Position, Position + getForward(), {0,1,0});
+	View = glm::lookAt(glm::vec3(0,0,0), glm::vec3(0, 0, 0) + getForward(), {0,1,0});
 	Projection = glm::perspective(fov, aspect, near, far);
 }
 
 void Cle::Gfx::Camera::lookAt(glm::vec3 target)
 {
-	View = glm::lookAt(Position, target, { 0,1,0 });
+	glm::vec3 direction = glm::normalize(target - Position);
+	View = glm::lookAt(
+		glm::vec3(0.0f),
+		direction,
+		glm::vec3(0, 1, 0)
+	);
 }
 
 glm::mat4 Cle::Gfx::Camera::getProjection() const
@@ -25,7 +30,7 @@ glm::mat4 Cle::Gfx::Camera::getProjection() const
 }
 glm::mat4 Cle::Gfx::Camera::getViewMatrix() const
 {
-	return glm::lookAt(Position, Position + getForward(), { 0,1,0 });
+	return glm::lookAt(glm::vec3(0,0,0), getForward(), {0,1,0});
 }
 glm::vec3 Cle::Gfx::Camera::getForward() const
 {

@@ -4,11 +4,12 @@
 #include "imgui/misc/cpp/imgui_stdlib.h"
 #include "Audio/AudioEngine.h"
 #include "shared.h"
+#include "imgui_internal.h"
 using namespace Cle::Components;
 
 namespace Cle::Editor
 {
-	EditorUI::EditorUI(Cle::World* World, GLFWwindow* m_window, Cle::Gfx::Camera* m_camera) :m_camera(m_camera), m_window(m_window), m_registry(World->registry), World(World)
+	Cle::Editor::EditorUI::EditorUI(Cle::World* World, GLFWwindow* m_window) : m_window(m_window), m_registry(World->registry), World(World)
 	{
 		ImGui::CreateContext();
 		io = &ImGui::GetIO();
@@ -18,17 +19,18 @@ namespace Cle::Editor
 		io->Fonts->AddFontFromFileTTF("./fonts/OpenSans.ttf", 18.0f);
 
 		ImGuiStyle& style = ImGui::GetStyle();
-		ImGui::StyleColorsLight();
-		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
-		style.Colors[ImGuiCol_Text] = ImVec4(0.1, 0.1, 0.1, 1.0);
-		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
-		style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.8, 0.8, 0.8, 1.0);
+		ImGui::StyleColorsDark();
+	//	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
+		//style.Colors[ImGuiCol_Text] = ImVec4(0.1, 0.1, 0.1, 1.0);
+		//style.Colors[ImGuiCol_TitleBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
+		//style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.8, 0.8, 0.8, 1.0);
 		style.WindowRounding = 5.0f;
 		if (m_Pipeline == Cle::Gfx::Pipeline::OPENGL) {
 			ImGui_ImplGlfw_InitForOpenGL(m_window, true);
 			ImGui_ImplOpenGL3_Init("#version 330 core");
-		}
 
+		}
+	
 	}
 	void EditorUI::DrawChildren(entt::entity parent)
 	{
@@ -53,10 +55,16 @@ namespace Cle::Editor
 			ImGui::PopID();
 		}
 	}
+	static bool explorerHovered = false;
+	static bool propertiesHovered = false;
 	void EditorUI::DrawExplorer()
 	{
-
+		
 		ImGui::Begin("Explorer");
+		explorerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+	
+	
+	
 		if (ImGui::TreeNodeEx("World", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			for (auto e : m_registry->view<TreeInfo>())
@@ -66,7 +74,7 @@ namespace Cle::Editor
 				ImGui::PushID((int)e);
 
 				if (m_Focused_Entity == e) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
-				else ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8, 0.8, 0.8, 1.0));
+				else ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
 				bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).getName().c_str(), ImGuiTreeNodeFlags_Framed);
 
 				DrawContextMenu(e);
@@ -91,18 +99,36 @@ namespace Cle::Editor
 	}
 	void EditorUI::DrawProperties()
 	{
+		
+		ImGui::Begin("Properties");
+		propertiesHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+
 		if (m_Focused_Entity == entt::null)
 		{
+			ImGui::End();
 			return;
 		}
-		ImGui::Begin("Properties");
 		Transform* transform = m_registry->try_get<Transform>(m_Focused_Entity);
 		LightComponent* lightComponent = m_registry->try_get<LightComponent>(m_Focused_Entity);
 		Color* color = m_registry->try_get<Color>(m_Focused_Entity);
+		auto name = m_registry->try_get<Name>(m_Focused_Entity);
+
 		auto mesh = m_registry->try_get<std::shared_ptr<Cle::GenericMesh>>(m_Focused_Entity);
 		std::shared_ptr<Cle::Audio::Sound>* soundptr = m_registry->try_get<std::shared_ptr<Cle::Audio::Sound>>(m_Focused_Entity);
 
 		Cle::Components::CubeMapTexture* cubeMap = m_registry->try_get<Cle::Components::CubeMapTexture>(m_Focused_Entity);
+		
+		if (name)
+		{
+			if (ImGui::TreeNodeEx("Name", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				std::string newname = name->getName();
+				ImGui::InputText("Name", &newname);
+				name->setName(newname);
+
+				ImGui::TreePop();
+			}
+		}
 		if (soundptr)
 		{
 			auto sound = *soundptr;
@@ -124,6 +150,9 @@ namespace Cle::Editor
 				{
 					if (!playing) sound->Pause();
 					else sound->Play();
+				}
+				if (ImGui::Checkbox("Global", &sound->global))
+				{
 				}
 				ImGui::TreePop();
 
@@ -275,8 +304,34 @@ namespace Cle::Editor
 			ImGui::EndPopup();
 		}
 	}
+	void EditorUI::DrawGamePanel()
+	{
+		ImGui::Begin("Game");
+		auto size = ImGui::GetWindowSize();
+		if (!m_registry->ctx().contains<Camera>())
+		{
+			ImGui::End();
+			return;
+		}
+		static auto& m_camera = m_registry->ctx().get<Camera>();
+
+		m_camera.width = size.x;
+		m_camera.height = size.y;
+		m_camera.aspect = size.x / (float)size.y;
+		mousePosRelativeToGame = glm::vec2(
+			size.x*(ImGui::GetMousePos().x - ImGui::GetCursorScreenPos().x )/ ImGui::GetContentRegionAvail().x
+			, size.y * (ImGui::GetMousePos().y - ImGui::GetCursorScreenPos().y) / ImGui::GetContentRegionAvail().y
+			);
+
+
+		ImGui::Image((ImTextureID)World->renderer.getImage(), ImGui::GetContentRegionAvail(),ImVec2(0,1),ImVec2(1,0));
+		ImGui::End();
+	}
 	void EditorUI::DrawGizmo(entt::entity entity)
 	{
+		if (!m_registry->ctx().contains<Camera>()) return;
+		auto& m_camera = m_registry->ctx().get<Camera>();
+		
 		static auto gizmoType = ImGuizmo::OPERATION::TRANSLATE;
 		if (glfwGetKey(m_window, GLFW_KEY_E) == GLFW_PRESS) {
 			gizmoType = ImGuizmo::OPERATION::TRANSLATE;
@@ -289,47 +344,97 @@ namespace Cle::Editor
 		}
 		Cle::Components::Transform* transform = m_registry->try_get<Cle::Components::Transform>(entity);
 		if (!transform) return;
-		auto& mesh = m_registry->get<std::shared_ptr<GenericMesh>>(entity);
-		ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());
-		int width, height;
-		glfwGetWindowSize(m_window, &width, &height);
-		ImGuizmo::SetRect(
-			0, 0,
-			width,
-			height
-		);
+		ImGui::Begin("Game");
 
-		glm::mat4 modelCopy = transform->model;
+		ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+
+
+		//glfwGetWindowSize(m_window, &width, &height);
+		auto size = ImGui::GetWindowSize();
+		auto pos = ImGui::GetWindowPos();
+		ImGuizmo::SetRect(
+			pos.x,
+			pos.y,
+			size.x,
+			size.y
+		);
+		glm::mat4 modelCopy = transform->getRelativeModel(m_camera);
+
 		ImGuizmo::Manipulate(
-			glm::value_ptr(m_camera->getViewMatrix()),
-			glm::value_ptr(m_camera->getProjection()),
+			glm::value_ptr(m_camera.getViewMatrix()),
+			glm::value_ptr(m_camera.getProjection()),
 			gizmoType,
 			ImGuizmo::LOCAL,
 			glm::value_ptr(modelCopy)
 		);
 		if (ImGuizmo::IsUsing()) {
 			glm::vec3 nscale, npos, nrot;
-			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelCopy), glm::value_ptr(npos), glm::value_ptr(nrot), glm::value_ptr(nscale));
+			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelCopy), glm::value_ptr(npos), glm::value_ptr(nrot), glm::value_ptr(nscale));\
+				npos += m_camera.Position;
 			transform->setScale(nscale);  transform->setOrientation(glm::radians(nrot)); transform->setPosition(npos);
 			transform->dirty = true;
 		}
+		ImGui::End();
+	}
+	static void autodock(EditorUI* ui,ImGuiID& dockspace)
+	{
+		static ImGuiID leftDock, rightDock, rightBottom, center = 0;
+		static bool docked = false;
+		if (!docked)
+		{
+			ImGui::DockBuilderRemoveNode(dockspace);
+			ImGui::DockBuilderAddNode(dockspace, ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(
+				dockspace,
+				ImGui::GetMainViewport()->WorkSize
+			);
+			center = dockspace;
 
+			ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.30f, &leftDock, &center);
+			ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.30f, &rightDock, &center);
+		//	ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.25f, &rightBottom, &rightDock);
+
+			ImGui::DockBuilderDockWindow("Game", center);
+
+			ImGui::DockBuilderDockWindow("Explorer", rightDock);
+
+			ImGui::DockBuilderDockWindow("Properties", leftDock);
+
+			ImGui::DockBuilderFinish(dockspace);
+			docked = true;
+		}
 	}
 	void EditorUI::Update()
 	{
-
+		if (explorerHovered || propertiesHovered) pointerBusy = true;
+		else pointerBusy = false;
+		if (!m_registry->ctx().contains<Camera>())
+		{
+			std::cout << "no camera\n";
+			m_registry->ctx().emplace<Camera>();
+		}
+		static bool autodocked = false;
+		
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 		ImGuizmo::BeginFrame();
+		ImGuiID dockspace = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
+		autodock(this, dockspace);
+		
+		
+
+		DrawGamePanel();
 		DrawExplorer();
 		DrawProperties();
 		if (m_Focused_Entity != entt::null && m_registry->valid(m_Focused_Entity)) {
 			DrawGizmo(m_Focused_Entity);
 		}
+	
 		ImGui::GetIO().WantCaptureMouse = ImGuizmo::IsOver() ? false : ImGui::GetIO().WantCaptureMouse;
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 	}
 
 }

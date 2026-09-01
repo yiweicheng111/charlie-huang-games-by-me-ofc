@@ -26,6 +26,32 @@ namespace Cle::Renderer
 		std::unordered_map<std::string, std::shared_ptr<Cle::Gfx::ITexture>> textureCache;
 		//	std::unordered_map<Cle::Components::MaterialRef, std::shared_ptr<Cle::Gfx::Material>> materialCache;
 	public:
+		int resolutionWidth = 2000;
+		int resolutionHeight = 2000;
+		int width, height = 1;
+
+		void onDeleteFunction(entt::registry& r, entt::entity e)
+		{
+			if (r.any_of< std::shared_ptr<Cle::GenericMesh>>(e))
+			{
+				auto& mesh = r.get< std::shared_ptr<Cle::GenericMesh>>(e);
+
+
+				if (gpuMeshCache[mesh].use_count() <= 1)
+				{
+					gpuMeshCache.erase(mesh);
+				}
+
+			}
+			if (r.any_of< std::shared_ptr<Cle::Gfx::ITexture>>(e))
+			{
+				auto& tex = r.get< std::shared_ptr<Cle::Gfx::ITexture>>(e);
+				if (textureCache[tex->getPath()].use_count() <= 1)
+				{
+					textureCache.erase(tex->getPath());
+				}
+			}
+		}
 		std::unordered_map<std::string, std::shared_ptr<IShader>> shaderCache;
 
 		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh) = 0;
@@ -49,6 +75,8 @@ namespace Cle::Renderer
 
 		entt::registry* m_registry;
 		virtual ~IRenderer() = default;
+		virtual void drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow* window) = 0;
+
 		virtual std::shared_ptr<Cle::IShader> getDefaultShader() = 0;
 		virtual void setSettings() = 0;
 		virtual void beginFrame() = 0;
@@ -61,13 +89,55 @@ namespace Cle::Renderer
 		//virtual void SyncMeshes(entt::registry& registry) = 0;
 		virtual void UniformCamMatrix(Cle::Gfx::Camera& camera, std::shared_ptr<Cle::IShader> shader) ;
 		virtual void lightingPass() ;
-		virtual void clear() = 0;
 		virtual std::shared_ptr<Cle::Gfx::ITexture> phraseSkybox(std::vector<std::string> skybox) = 0;
 		virtual void cleanDirtyMesh(entt::entity entity);
 		virtual bool isWithinFarPlane(entt::entity entity, Cle::Gfx::Camera& camera);
-		virtual void passSkybox() = 0;
 		virtual std::shared_ptr<Cle::Gfx::IMesh> assignLOD(entt::entity entity, glm::vec3 viewPosition) = 0;
+		virtual unsigned int getImage() const = 0;
 		static std::unique_ptr<IRenderer> Create(entt::registry* registry);
 		virtual void onSceneLoaded();
+		static inline const std::vector<float> cube = {
+			-1.0f,  1.0f, -1.0f,
+			-1.0f, -1.0f, -1.0f,
+			 1.0f, -1.0f, -1.0f,
+			 1.0f, -1.0f, -1.0f,
+			 1.0f,  1.0f, -1.0f,
+			-1.0f,  1.0f, -1.0f,
+
+			-1.0f, -1.0f,  1.0f,
+			-1.0f, -1.0f, -1.0f,
+			-1.0f,  1.0f, -1.0f,
+			-1.0f,  1.0f, -1.0f,
+			-1.0f,  1.0f,  1.0f,
+			-1.0f, -1.0f,  1.0f,
+
+			 1.0f, -1.0f, -1.0f,
+			 1.0f, -1.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f, -1.0f,
+			 1.0f, -1.0f, -1.0f,
+
+			-1.0f, -1.0f,  1.0f,
+			-1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,
+			 1.0f, -1.0f,  1.0f,
+			-1.0f, -1.0f,  1.0f,
+
+			-1.0f,  1.0f, -1.0f,
+			 1.0f,  1.0f, -1.0f,
+			 1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,
+			-1.0f,  1.0f,  1.0f,
+			-1.0f,  1.0f, -1.0f,
+
+			-1.0f, -1.0f, -1.0f,
+			-1.0f, -1.0f,  1.0f,
+			 1.0f, -1.0f, -1.0f,
+			 1.0f, -1.0f, -1.0f,
+			-1.0f, -1.0f,  1.0f,
+			 1.0f, -1.0f,  1.0f
+		};
 	};
 }

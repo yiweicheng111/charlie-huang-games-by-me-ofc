@@ -284,7 +284,8 @@ enum aiAnimBehaviour {
  *  - as usual - scaling, rotation, translation.
  *
  *  @note All keys are returned in their correct, chronological order.
- *  Duplicate keys don't pass the validation step. Most likely there
+ *  Duplicate keys don't 
+ the validation step. Most likely there
  *  will be no negative time values, but they are not forbidden also ( so
  *  implementations need to cope with them! ) */
 struct aiNodeAnim {

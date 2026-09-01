@@ -5,6 +5,7 @@
 #include "EditorUI.h"
 #include "Physics.h"
 #include "ObjectController.h"
+#include "FakeCharController.h"
 namespace Cle::Editor
 {
 	class EditorApplication : public  Cle::Core::Application
@@ -13,7 +14,7 @@ namespace Cle::Editor
 		bool mapLoading = false;
 		entt::entity player;
 		Cle::Scripting::ScriptHandler m_ScriptHandler;
-	    Cle::Editor::FreeCameraControl m_Controller;
+	    std::unique_ptr<Cle::CameraController> m_Controller;
 		//Cle::ObjectCameraController m_Controller;
 		Cle::Editor::EditorUI m_UIHandler;
 		~EditorApplication();

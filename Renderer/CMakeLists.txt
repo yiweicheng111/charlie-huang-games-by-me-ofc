@@ -25,8 +25,11 @@ target_include_directories(
 
 	"${PROJECT_SOURCE_DIR}"
 )
+find_package(ReactPhysics3D REQUIRED)
+
 target_link_libraries(
 	Renderer PUBLIC
 	"${PROJECT_SOURCE_DIR}/Library/lib/glfw3.lib"
 	"opengl32.lib"
+	   ReactPhysics3D::ReactPhysics3D
 )

@@ -9,5 +9,7 @@ namespace Cle::OPENGL
 	{
 		GLuint ID{};
 		VBO(const std::vector<Cle::Gfx::Vertex>& vertices);
+		VBO(const std::vector<float>& vertices);
+
 	};
 }

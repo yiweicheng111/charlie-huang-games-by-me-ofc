@@ -20,14 +20,20 @@ namespace Cle
 			return instance;
 		}
 
-		float fogStart = 1.0f;
-		float fogEnd = 1e6;
-		float ambient = 0.5f;
-		glm::vec3 ambientColor = glm::vec3(1.0f);
-		glm::vec3 backgroundColor = glm::vec3(0.8f, 0.8f, 0.9f);
-		glm::vec3 sunDirection{1,-1.0,0.3 };
-		Cle::Components::CubeMapTexture skybox;
+		float fogStart = 1e3;
+		float fogEnd = 1e4;
+		float ambient = 0.3f;
 
+		glm::vec3 ambientColor = glm::vec3(0.9,0.5,0.5);
+		glm::vec3 sunDirection{0.5,-0.3,0.7};
+
+		glm::vec3 skyBottom = glm::vec3(1, 0.8, 0.8);
+		glm::vec3 skyTop = glm::vec3(0.6, 0.7, 1);
+		glm::vec3 backgroundColor = skyBottom;
+
+		Cle::Components::CubeMapTexture skybox;
+		std::shared_ptr<ITexture> skyboxTex;
+		bool usesSkybox = false;
 	private:
 		Lighting() {}
 		~Lighting() {}

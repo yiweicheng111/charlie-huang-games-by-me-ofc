@@ -30,7 +30,8 @@ std::vector<GenericMesh>AssetHandler::ProcessNode(aiNode* node, const aiScene* s
 		gMesh.positionOffset = glm::vec3(pos.x, pos.y, pos.z);
 
 		meshes.push_back(gMesh);
-	}
+	}	
+
 	for (unsigned int i = 0; i < node->mNumChildren; i++)
 	{
 		auto children = ProcessNode(node->mChildren[i], scene, aiGlobal);
@@ -117,9 +118,11 @@ std::vector<std::shared_ptr<GenericMesh>>& AssetHandler::LoadModel(std::string p
 	);
 
 	std::vector<GenericMesh> Meshes = ProcessNode(scene->mRootNode, scene, aiMatrix4x4());
+
 	auto& entry = modelCache[path];
 	entry.reserve(Meshes.size());
 	int i = 0;
+
 	for (auto& Mesh : Meshes)
 	{
 		Mesh.setModelPath(path);
@@ -129,5 +132,6 @@ std::vector<std::shared_ptr<GenericMesh>>& AssetHandler::LoadModel(std::string p
 		entry.push_back(std::move(ptr));
 		i++;
 	}
+
 	return entry;
 }

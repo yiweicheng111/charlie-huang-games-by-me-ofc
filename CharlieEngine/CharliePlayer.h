@@ -14,7 +14,6 @@ namespace Cle
 
 		virtual void AudioPass() override;
 		virtual void updateBoundingSpheres() override;
-		void findClientCamera();
 
 		virtual void Run() override;
 		virtual void Render() override;

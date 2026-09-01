@@ -14,7 +14,7 @@ namespace Cle {
 		Cle::Renderer::IRenderer& renderer;
 		World(entt::registry* registry, Cle::Renderer::IRenderer& renderer) : registry(registry), renderer(renderer) {
 			registry->on_destroy<entt::entity>().connect<&Cle::World::DestroyObject>(*this);
-
+			registry->on_destroy<entt::entity>().connect<&Cle::Renderer::IRenderer::onDeleteFunction>(&renderer);
 		}
 		entt::entity CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMesh);
 		entt::entity CopyObject(entt::entity existing);

@@ -17,10 +17,17 @@ namespace Cle::OPENGL
 	class Renderer : public Cle::Renderer::IRenderer
 	{
 	public:
+		GLuint sceneFBO;
+		GLuint sceneImage;
+		GLuint sceneRBO;
 		Renderer(entt::registry* registry);
 		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh) override;
 		virtual std::shared_ptr<Cle::Gfx::ITexture> getOrMakeTexture(const std::string& path) override;
-
+		virtual void drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow* window) override;
+		virtual unsigned int getImage() const
+		{
+			return sceneImage;
+		}
 		virtual std::shared_ptr<Cle::IShader> getDefaultShader() override;
 		virtual void beginFrame() override;
 		virtual void clearFrame(GLFWwindow* window) override;
@@ -28,8 +35,6 @@ namespace Cle::OPENGL
 		//virtual void uploadMesh(entt::entity e, std::shared_ptr<Cle::GenericMesh> mesh, entt::registry& registry) override;
 		virtual void setSettings() override;
 		virtual void drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera) override;
-		virtual void clear() override;
-		virtual void passSkybox() override;
 		virtual void lightPass() override;
 	//	virtual void UniformCamMatrix(Cle::Gfx::Camera& camera, std::shared_ptr<Cle::IShader> shader) override;
 	//	virtual void lightingPass() override;

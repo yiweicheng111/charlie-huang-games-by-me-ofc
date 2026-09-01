@@ -7,6 +7,7 @@ file(GLOB_RECURSE SourceFiles
 )
 add_executable(Server ${CMAKE_CURRENT_SOURCE_DIR}/Server.cpp)
 
+
 target_include_directories(
 	Server PUBLIC
 	"${PROJECT_SOURCE_DIR}/Library/vendor/enet/include"
@@ -14,4 +15,4 @@ target_include_directories(
 	"${PROJECT_SOURCE_DIR}/CharlieEngine"
 	"${CMAKE_SOURCE_DIR}"
 )
-target_link_libraries(Server PRIVATE enet CharlieEngine)
+target_link_libraries(Server PRIVATE enet CharlieEngine ReactPhysics3D::ReactPhysics3D)

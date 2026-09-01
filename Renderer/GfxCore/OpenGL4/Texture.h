@@ -16,8 +16,8 @@ namespace Cle::OPENGL
 		~Texture() {
 			glDeleteTextures(1, &ID);
 		}
-		Texture(std::string path);
-		Texture(std::string path,GLenum target);
+		Texture(const std::string& p);
+		Texture(const std::string& p,GLenum target);
 		Texture() = default;
 		Texture(unsigned int ID) : ID(ID) {}
 		template <class Archive>

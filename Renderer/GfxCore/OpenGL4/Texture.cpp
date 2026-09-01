@@ -5,13 +5,14 @@
 #include "stb/stb_image.h"
 #include <iostream>
 using namespace Cle::OPENGL;
-Texture::Texture(std::string path) {
+Texture::Texture(const std::string& p)  {
+	this->path = p;
+
 	glGenTextures(1, &ID);
 	glBindTexture(GL_TEXTURE_2D, ID);
 	int width, height, channels;
 	unsigned char* bytes = stbi_load(path.c_str(), &width, &height, &channels, 0);
 	if (!bytes) {
-		std::cerr << "image " << path << " not loaded\n";
 		loaded = false;
 		return;
 	}
@@ -34,7 +35,8 @@ Texture::Texture(std::string path) {
 	stbi_image_free(bytes);
 	loaded = true;
 }
-Texture::Texture(std::string path,GLenum target) {
+Texture::Texture(const std::string& p, GLenum target) {
+	this->path = p;
 	glGenTextures(1, &ID);
 	glBindTexture(target, ID);
 	int width, height, channels;

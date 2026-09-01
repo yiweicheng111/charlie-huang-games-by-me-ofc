@@ -4,7 +4,7 @@
 #include "CameraController.h"
 namespace Cle::Editor
 {
-	class FreeCameraControl : CameraController
+	class FreeCameraControl : public CameraController
 	{
 	private:
 		double lastX{};
@@ -27,18 +27,7 @@ namespace Cle::Editor
 
 			double X;
 			double Y;
-			if (glfwGetMouseButton(m_Window, GLFW_MOUSE_BUTTON_RIGHT) && !ImGui::GetIO().WantCaptureMouse)
 			{
-				glfwGetCursorPos(m_Window, &X, &Y);
-				if (first) {
-					first = false;
-					lastX = X;
-					lastY = Y;
-				}
-				m_Camera->yaw += (X - lastX)* sensitivity;
-				m_Camera->pitch -= (Y - lastY) * sensitivity;
-				lastX = X;
-				lastY = Y;
 				glm::vec3 right = glm::cross(m_Camera->getForward(), { 0,1,0 });
 				if (glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS)
 				{
@@ -56,6 +45,19 @@ namespace Cle::Editor
 				{
 					m_Camera->Position += speed * right;
 				}
+			}
+			if (glfwGetMouseButton(m_Window, GLFW_MOUSE_BUTTON_RIGHT))
+			{
+				glfwGetCursorPos(m_Window, &X, &Y);
+				if (first) {
+					first = false;
+					lastX = X;
+					lastY = Y;
+				}
+				m_Camera->yaw += (X - lastX)* sensitivity;
+				m_Camera->pitch -= (Y - lastY) * sensitivity;
+				lastX = X;
+				lastY = Y;
 			}
 			else
 			{

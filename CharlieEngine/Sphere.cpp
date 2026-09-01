@@ -1,6 +1,7 @@
 #include "Components.h"
 bool Cle::Components::Sphere::isOnFrustum(const Frustum& frustum, const glm::mat4& model)
 {
+
 	Sphere globalSphere(center, radius);
 	return (globalSphere.isOnOrForwardPlane(frustum.leftFace) &&
 		globalSphere.isOnOrForwardPlane(frustum.rightFace) &&

@@ -39,12 +39,13 @@ void Cle::Network::poll()
     ENetEvent event;
     while (enet_host_service(client, &event, 0) > 0)
     {
-        std::cout << "polling for server\n";
         if (!client || !server) continue;
         switch (event.type)
         {
         case ENET_EVENT_TYPE_RECEIVE:
         {
+            using namespace Cle;
+            using namespace Cle::Components;
             std::string bytes(
                 (char*)event.packet->data,
                 event.packet->dataLength
@@ -55,28 +56,30 @@ void Cle::Network::poll()
 
             Cle::Header header;
             ar(header);
-            using namespace Cle;
-            using namespace Cle::Components;
+      
             std::vector<EntityPacket> packets;
 
-            if (header.msg == ServerMessage::UpdateEntity)
+            if (header.msg == NetworkMessage::UpdateEntity)
             {
                 ar(packets);
                 for (auto& p : packets)
                 {
                     auto entity = netIDtoEntity[p.netID.value];
+
                     if (!registry->valid(entity)) continue;
                     if (p.transform && registry->any_of<Transform>(entity))
                     {
-                       auto& t = registry->get<Transform>(entity);
-                       t.setOrientation(p.transform->getOrientation());
-                       t.setPosition(p.transform->getPosition());
-                       t.setScale(p.transform->getScale());
+                        registry->patch<Transform>(entity, [&](Transform& t) {
+                            t.setOrientation(p.transform->getOrientation());
+                            t.setPosition(p.transform->getPosition());
+                            t.setScale(p.transform->getScale());
+                            });
 
                     }
                 }
             }
-            else if (header.msg == ServerMessage::OnJoin)
+         
+            else if (header.msg == NetworkMessage::OnJoin)
             {
                 ar(packets);
 
@@ -119,11 +122,11 @@ void Cle::Network::poll()
                         
                     tree.setParent(ent, parent, registry);
                 }
+                if (onSceneLoaded) onSceneLoaded();
+
             }
       
-            if (onSceneLoaded) onSceneLoaded();
             enet_packet_destroy(event.packet);
-            std::cout << "joined and loaded game\n";
          
             break;
          

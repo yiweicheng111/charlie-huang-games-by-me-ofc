@@ -63,8 +63,8 @@ namespace Cle::OPENGL
 			EBO ebo(indices);
 
 			vao.LinkAttrib(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
-			vao.LinkAttrib(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 3);
-			vao.LinkAttrib(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 5);
+			vao.LinkAttrib(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 3*sizeof(float));
+			vao.LinkAttrib(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 5*sizeof(float));
 
 			m_VAO = vao.ID;
 			m_VBO = vbo.ID;

@@ -76,7 +76,6 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 
 void Cle::World::DestroyObject(entt::registry& registry,entt::entity existing)
 {
-	deleteObjectCallback();
 
 	if (registry.any_of<TreeInfo>(existing) && registry.valid(registry.get<TreeInfo>(existing).getParent()) && registry.any_of<TreeInfo>(registry.get<TreeInfo>(existing).getParent())) {
 		registry.get<TreeInfo>(registry.get<TreeInfo>(existing).getParent()).removeChild(existing, &registry);

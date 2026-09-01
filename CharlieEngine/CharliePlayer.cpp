@@ -1,13 +1,35 @@
 #include "CharliePlayer.h"
-#include "IRenderer.h"
+#include "OpenGL4/OpenGLRenderer.h"
+#include <glm/glm.hpp>
+#include <iostream>
 using namespace Cle::Gfx;
 using namespace Cle::Components;
-
-
-void Cle::RunnableApplication::updateBoundingSpheres() {
+/*
+void Cle::RunnableApplication::updateAABBS() {
 	static auto frustum = Frustum::createFrustumInCamera(m_camera);
 	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
-		if (registry.any_of<Transform>(ent)) {
+		if (registry.all_of<Transform, Bounds, std::shared_ptr<GenericMesh>>(ent)) {
+			Transform& t = registry.get<Transform>(ent);
+			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
+			glm::mat4 model = t.model;
+			auto& aabb = registry.get<Bounds>(ent).aabb;
+
+
+			if (aabb.dirty) {
+				aabb = m->m_local_AABB;
+				aabb.max *= t.getScale();
+				aabb.min *= t.getScale();
+				aabb.Translate(t.getPosition());
+				aabb.dirty = false;
+			}
+		}
+	}
+}*/
+
+void Cle::RunnableApplication::updateBoundingSpheres() {
+	static auto frustum = Frustum::createFrustumInCamera(*m_camera);
+	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
+		if (registry.all_of<Transform, Bounds, std::shared_ptr<GenericMesh>>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
 			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
 			auto& sphere = registry.get<Bounds>(ent).sphere;
@@ -21,24 +43,17 @@ void Cle::RunnableApplication::updateBoundingSpheres() {
 	}
 }
 
-void Cle::RunnableApplication::findClientCamera()
-{
-	if (!registry.ctx().contains<Cle::Gfx::Camera>()) return;
-	m_camera = registry.ctx().get<Cle::Gfx::Camera>();
-}
-
-
 
 Cle::RunnableApplication::~RunnableApplication()
 {
-	if (m_network.client) enet_host_destroy(m_network.client);
 	glfwTerminate();
 }
 Cle::RunnableApplication::RunnableApplication()
 {
-	enet_initialize();
 	ma_engine_init(nullptr, &audio_engine);
+	registry.ctx().emplace<ma_engine*>(&audio_engine);
 	renderer = Renderer::IRenderer::Create(&registry);
+
 	window = glfwCreateWindow(800, 800, "CHARLIE ZI", NULL, NULL);
 	assert(window != NULL);
 	glfwMakeContextCurrent(window);
@@ -51,18 +66,33 @@ Cle::RunnableApplication::RunnableApplication()
 	World = std::make_unique<Cle::World>(&registry, *renderer);
 
 	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
-	m_camera = Camera(glm::radians(70.0f), 1);
-	m_network = Network(&registry);
+
+	if (!registry.ctx().contains<Camera>())
+	{
+		registry.ctx().emplace<Camera>();
+	}
+	
+	m_camera = &registry.ctx().get<Camera>();
+
+	Network::setRegistry(&registry);
+	m_network = &Network::getInstance();
+	m_network->onSceneLoaded = [this]()
+		{
+			renderer->onSceneLoaded();
+		};
+
 	/*
 		player = World.CreateDebugObject({}, {});
 		registry.get<Cle::Components::Transform>(player).setScale({ 1,1,1 });*/
 		//	m_Controller = Cle::ObjectCameraController(&m_camera, window, &registry,player);
 
-	
+	/*	World->deleteObjectCallback = [&]()
+		{
+			m_UIHandler.m_Focused_Entity = entt::null;
+		};
+	*/
+
 }
-
-
-
 
 
 
@@ -83,11 +113,14 @@ void Cle::RunnableApplication::Run()
 			Physics1::resume(registry);
 		}*/
 		AudioPass();
-		renderer->beginFrame();
 		Render();
+
 		Update(0.1f);
+
 		renderer->clearFrame(window);
-		m_network.poll();
+
+		m_network->poll();
+
 	}
 }
 void Cle::RunnableApplication::AudioPass() {
@@ -97,38 +130,21 @@ void Cle::RunnableApplication::AudioPass() {
 			glm::vec3 position = registry.get<Cle::Components::Transform>(e).getPosition();
 
 			sound->position = position;
-			sound->UpdateVolume(m_camera.Position);
+			sound->UpdateVolume(m_camera->Position);
 			continue;
 		}
 	}
 }
 void Cle::RunnableApplication::Render()
 {
-	if (World->worldLoading) return;
-	renderer->lightingPass();
-	//renderer->SyncMeshes(registry);
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-	if (width == 0 || height == 0) return;
-	m_camera.aspect = float(width) / height;
-	int totalMeshes = 0;
-	int totalDrawn = 0;
-	Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-	auto view = registry.view<std::shared_ptr<GenericMesh>, Transform, Components::Bounds>();
-	view.each([&](auto entity, std::shared_ptr<GenericMesh>& mesh, Transform& transform, Components::Bounds& bounds)
-		{
-			if (World->worldLoading) return;
-			auto& shader = registry.emplace<std::shared_ptr<IShader>>(entity, renderer->getDefaultShader());
-			renderer->UniformCamMatrix(m_camera, shader);
-			//totalMeshes++;
-			if (bounds.sphere.isOnFrustum(frustum, transform.model) && !mapLoading) {
-				renderer->drawMesh(entity, registry, m_camera);
-				//totalDrawn++;
-			}
-		});
-	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
+	m_camera->aspect = renderer->width/(float)renderer->height;
+	renderer->drawRegistry(*m_camera, window);
 }
 void Cle::RunnableApplication::Update(float dt) {
 	//Physics1::update(registry);
+
+
+
 	updateBoundingSpheres();
+
 }

@@ -7,6 +7,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/Library/vendor/meshoptimizer")
 add_subdirectory("${PROJECT_SOURCE_DIR}/Library/vendor/enet")
 add_subdirectory("${PROJECT_SOURCE_DIR}/Library/vendor/assimp")
 
+find_package(ReactPhysics3D CONFIG REQUIRED)
 
 add_subdirectory(Server)
 add_subdirectory(Renderer)
@@ -27,6 +28,7 @@ target_include_directories(
     "${PROJECT_SOURCE_DIR}/CharlieEngine"
     "${PROJECT_SOURCE_DIR}/CharlieEditor"
     "${PROJECT_SOURCE_DIR}/Renderer"
+     
 )
 add_custom_target(CopyAssets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -35,5 +37,5 @@ add_custom_target(CopyAssets ALL
 )  
 
 
-target_link_libraries(Charlie PUBLIC Renderer CharlieEngine CharlieEditor enet assimp meshoptimizer)
+target_link_libraries(Charlie PUBLIC Renderer CharlieEngine CharlieEditor enet assimp meshoptimizer ReactPhysics3D::ReactPhysics3D)
 add_dependencies(Charlie CopyAssets)

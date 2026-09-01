@@ -14,5 +14,5 @@ void Cle::Components::Ray::SetFromPointer(double mx, double my, int screenWidth,
         world.z /= world.w;
     }
     origin = camera.Position;
-    dir = glm::normalize(glm::vec3(world.x, world.y, world.z) - origin);
+    dir = glm::normalize(glm::vec3(world.x, world.y, world.z));
 }

@@ -1,5 +1,7 @@
 #pragma once
 #include "ITexture.h"
+#include <glm/glm.hpp>
+#include <memory>
 namespace Cle
 {
 	class IShader

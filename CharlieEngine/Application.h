@@ -16,9 +16,10 @@ namespace Cle::Core
 	class Application
 	{
 	public:
-		Network m_network;
+		Network* m_network;
 		Cle::Scripting::ScriptHandler* m_ScriptHandler;
-		Cle::Gfx::Camera m_camera;
+		Cle::Gfx::Camera owned_camera;
+		Cle::Gfx::Camera* m_camera;
 		entt::registry registry;
 		GLFWwindow* window;
 		ma_engine audio_engine;

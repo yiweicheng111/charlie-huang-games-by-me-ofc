@@ -25,16 +25,20 @@ namespace Cle::Editor
 		bool pointerBusy = false;
 		entt::entity m_Focused_Entity = entt::null;
 		GLFWwindow* m_window;
-		Cle::Gfx::Camera* m_camera;
 		Cle::World* World;
-		EditorUI(Cle::World* World, GLFWwindow* m_window, Cle::Gfx::Camera* m_camera);
+
+		
+		EditorUI(Cle::World* World, GLFWwindow* m_window);
 		EditorUI() {};
+
+		glm::vec2 mousePosRelativeToGame;
+
 		void DrawChildren(entt::entity parent);
 		void DrawExplorer();
 		void DrawProperties();
 		void DrawTopBar();
 		void DrawContextMenu(entt::entity e);
-
+		void DrawGamePanel();
 		void DrawGizmo(entt::entity entity);
 		void Update();
 

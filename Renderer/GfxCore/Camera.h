@@ -13,13 +13,15 @@ namespace Cle::Gfx
 	class Camera
 	{
 	public:
-		glm::vec3 Position;
+		glm::vec3 Position{ 0,0,0 };
 		float pitch{};
 		float yaw = -glm::pi<float>() / 2;
 		float fov{};
 		float aspect{};
 		float far = 1000.0f;
 		float near = 0.1f;
+		float width = 1;
+		float height = 1;
 		Camera() : fov(glm::radians(70.0f)), aspect(1) {}
 		Camera(float fov, float aspect);
 		void lookAt(glm::vec3 target);

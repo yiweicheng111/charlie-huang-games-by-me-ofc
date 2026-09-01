@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <functional>
+#include "GfxCore/Camera.h"
 namespace Cle::Components
 {
 	class Transform
@@ -11,10 +12,17 @@ namespace Cle::Components
 		glm::quat orientation = glm::quat(glm::vec3(0, 0, 0));
 		glm::vec3 position = glm::vec3(0.0f);
 		glm::vec3 scale = glm::vec3(1.0f);
+
 	public:
-	
+		glm::vec3 relativePosition;
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 computeMatrix();
+		glm::mat4 getRelativeModel(Cle::Gfx::Camera& cam) const
+		{
+			auto copy = model;
+			copy[3] -= glm::vec4(cam.Position, 0.0f);
+			return copy;
+		}
 		glm::quat getOrientation() const { return orientation; }
 		glm::vec3 getPosition() const { return position; }
 		glm::vec3 getScale() const { return scale; }

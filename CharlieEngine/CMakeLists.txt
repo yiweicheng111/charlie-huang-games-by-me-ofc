@@ -32,7 +32,9 @@ file(GLOB_RECURSE EngineFiles
     "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
     "${PROJECT_SOURCE_DIR}/Library/vendor/miniaudio/*.c"
 )
+
 add_library(CharlieEngine STATIC ${EngineFiles})
+
 target_include_directories(CharlieEngine PUBLIC
     "${PROJECT_SOURCE_DIR}/Library/vendor"
 	"${PROJECT_SOURCE_DIR}/Library/vendor/enet/include"
@@ -43,8 +45,10 @@ target_include_directories(CharlieEngine PUBLIC
     "${PROJECT_SOURCE_DIR}"
 )
 
+find_package(ReactPhysics3D REQUIRED)
 
 target_link_libraries(CharlieEngine PUBLIC
     "${PROJECT_SOURCE_DIR}/Library/lib/glfw3.lib"
+    ReactPhysics3D::ReactPhysics3D
     opengl32.lib
 )

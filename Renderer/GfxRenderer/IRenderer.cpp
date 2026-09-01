@@ -90,7 +90,7 @@ bool Cle::Renderer::IRenderer::isWithinFarPlane(entt::entity entity, Cle::Gfx::C
 	if (!m_registry->valid(entity) ||  !m_registry->all_of<Cle::Components::Bounds, Cle::Components::Transform>(entity)) return false;
 	auto& t = m_registry->get<Cle::Components::Transform>(entity);
 	auto& b = m_registry->get<Cle::Components::Bounds>(entity);
-	return glm::length2(camera.Position - t.getPosition()) < ((camera.far - b.sphere.radius) * (camera.far - b.sphere.radius));
+	return glm::length2(camera.Position - t.getPosition())   < (camera.far+b.sphere.radius )* (camera.far + b.sphere.radius);
 }
 
 void Cle::Renderer::IRenderer::uploadMesh(entt::entity e, std::shared_ptr<Cle::GenericMesh> mesh, entt::registry& registry)

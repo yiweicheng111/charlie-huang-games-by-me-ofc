@@ -10,7 +10,6 @@
 using namespace Cle::Components;
 void Cle::gameIO::Snapshot(std::string path)
 {
-
 	std::ofstream f(path, std::ios::binary);
 	cereal::BinaryOutputArchive arch(f);
 	entt::snapshot snapshot(*registry);

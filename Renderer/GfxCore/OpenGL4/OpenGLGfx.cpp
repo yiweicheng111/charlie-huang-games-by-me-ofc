@@ -12,6 +12,13 @@ Cle::OPENGL::VBO::VBO(const std::vector<Vertex>& vertices)
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_DYNAMIC_DRAW);
 }
 
+Cle::OPENGL::VBO::VBO(const std::vector<float>& vertices)
+{
+	glGenBuffers(1, &ID);
+	glBindBuffer(GL_ARRAY_BUFFER, ID);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
+}
+
 Cle::OPENGL::EBO::EBO(const std::vector<unsigned int>& indices)
 {
 	glGenBuffers(1, &ID);
@@ -28,7 +35,7 @@ Cle::OPENGL::VAO::VAO(GLuint VBO)
 
 void Cle::OPENGL::VAO::LinkAttrib(int location, int attribs, GLenum dataType, unsigned char normalize, int stride, int pointer)
 {
-	glVertexAttribPointer(location, attribs, dataType, normalize, stride, (void*)(pointer*sizeof(float)));
+	glVertexAttribPointer(location, attribs, dataType, normalize, stride, (void*)(pointer));
 	glEnableVertexAttribArray(location);
 }
 
@@ -47,6 +54,7 @@ Cle::OPENGL::Program::Program(std::string vertexShaderPath, std::vector<std::str
 		glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
 		std::cout << errorLog << std::endl;
 	}
+
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	std::string fread = "";
 	for (std::string i : fragmentShadersPath) {
