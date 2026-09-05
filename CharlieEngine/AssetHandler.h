@@ -24,33 +24,54 @@ namespace Cle
 				return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
 			}
 		};
-		std::unordered_map<std::pair<std::string,int>, std::shared_ptr<GenericMesh>,pairhash> meshCache;
+		std::unordered_map<std::pair<std::string,int>, std::shared_ptr<MeshGeometry>,pairhash> meshCache;
 		std::unordered_map<std::string, std::vector< std::shared_ptr<GenericMesh>>> modelCache;
 
+		void UnloadModel(const std::string& path, int index, std::shared_ptr<GenericMesh>& gmeshp)
+		{
+			//std::cout << path << index <<std::endl;
 
+			auto it = meshCache.find({ path, index });
+			if (it == meshCache.end())
 
-		std::shared_ptr<GenericMesh> getOrMakeMesh(const std::string& path, int meshIndex)
+			{
+			//	std::cout << " note here" << std::endl;
+
+				return;
+			}
+
+			auto& meshPtr = meshCache[{path, index}];
+			std::cout << meshPtr.use_count() << std::endl;
+			auto& vec = modelCache[path];
+			vec.erase(std::remove(vec.begin(), vec.end(), gmeshp), vec.end());
+			std::cout << "a\n";
+			if (meshPtr.use_count() > 2){
+				//std::cout << "still some instances cant delete yet\n";
+				return;  
+			}
+
+			std::cout << "erased\n";
+			meshCache.erase(it);
+
+		}
+
+		/*std::shared_ptr<GenericMesh> getOrMakeMesh(const std::string& path, int meshIndex)
 		{
 			const auto& meshes = LoadModel(path);
-			if (meshIndex >= meshes.size()) meshIndex = meshes.size() - 1;
-			if (!modelCache.contains(path))
-			{
-				meshCache[{ path, meshIndex }] = meshes.at(meshIndex);
-				std::cout << "not loaded model before " << path << "index " << meshIndex << std::endl;
-				return meshes.at(meshIndex);
-			}
-			else if (!meshCache.contains({path,meshIndex}))
-			{
-				meshCache[{ path, meshIndex }] = modelCache[path].at(meshIndex);
-				std::cout << "not loaded mesh before " << path << "index " << meshIndex << std::endl;
+			if (meshes.empty())
+				return nullptr;
 
+			if (meshIndex < 0 ||
+				meshIndex >= static_cast<int>(meshes.size()))
+			{
+				meshIndex = static_cast<int>(meshes.size()) - 1;
 			}
 	
 			return  modelCache[path].at(meshIndex);
-		}
+		}*/
 
-		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 parentTransform);
-		GenericMesh ProcessMesh(aiMesh* Mesh, const aiScene* scene);
+		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 parentTransform,  std::unordered_map<unsigned int, std::shared_ptr<MeshGeometry>>& tempcache);
+		std::shared_ptr<MeshGeometry> ProcessMesh(aiMesh* Mesh, const aiScene* scene);
 		std::vector<std::shared_ptr<GenericMesh>>& LoadModel(std::string path);
 	};
 }

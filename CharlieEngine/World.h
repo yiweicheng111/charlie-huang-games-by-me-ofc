@@ -13,11 +13,14 @@ namespace Cle {
 		
 		Cle::Renderer::IRenderer& renderer;
 		World(entt::registry* registry, Cle::Renderer::IRenderer& renderer) : registry(registry), renderer(renderer) {
+			registry->on_destroy<std::shared_ptr<Cle::GenericMesh>>().connect<&Cle::Renderer::IRenderer::onDeleteFunction>(&renderer);
+
 			registry->on_destroy<entt::entity>().connect<&Cle::World::DestroyObject>(*this);
-			registry->on_destroy<entt::entity>().connect<&Cle::Renderer::IRenderer::onDeleteFunction>(&renderer);
 		}
 		entt::entity CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMesh);
 		entt::entity CopyObject(entt::entity existing);
+		std::vector<entt::entity> addModelToScene(const std::string& path);
+	
 		void Snapshot(std::string path);
 		void LoadFile(std::string path);
 		std::function<void(void)> deleteObjectCallback;

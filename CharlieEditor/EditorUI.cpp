@@ -270,11 +270,30 @@ namespace Cle::Editor
 	}
 	void EditorUI::DrawTopBar()
 	{
-		if (m_Pipeline == Cle::Gfx::Pipeline::OPENGL)
+		ImGui::Begin("Top");
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
 		{
-			ImGui::Begin("Top Bar");
-			ImGui::End();
+			pointerBusy = true;
 		}
+
+
+		if (ImGui::Button("Insert part"))
+		{
+			ImGui::OpenPopup("Geometries");
+		}
+		if (ImGui::BeginPopup("Geometries"))
+		{
+			if (ImGui::Selectable("Cube"))
+			{
+				//auto ents = World->addModelToScene("primitives/cube.gltf");
+				auto ents = World->addModelToScene("map/g.gltf");
+
+				if (ents.size()>=1) m_Focused_Entity = ents.at(0);
+			}
+			ImGui::EndPopup();
+		}
+	
+		ImGui::End();
 	}
 	void EditorUI::DrawContextMenu(entt::entity e)
 	{
@@ -410,7 +429,7 @@ namespace Cle::Editor
 		else pointerBusy = false;
 		if (!m_registry->ctx().contains<Camera>())
 		{
-			std::cout << "no camera\n";
+		//	std::cout << "no camera\n";
 			m_registry->ctx().emplace<Camera>();
 		}
 		static bool autodocked = false;
@@ -427,12 +446,15 @@ namespace Cle::Editor
 		DrawGamePanel();
 		DrawExplorer();
 		DrawProperties();
+		DrawTopBar();
 		if (m_Focused_Entity != entt::null && m_registry->valid(m_Focused_Entity)) {
 			DrawGizmo(m_Focused_Entity);
 		}
 	
 		ImGui::GetIO().WantCaptureMouse = ImGuizmo::IsOver() ? false : ImGui::GetIO().WantCaptureMouse;
+
 		ImGui::Render();
+
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	}

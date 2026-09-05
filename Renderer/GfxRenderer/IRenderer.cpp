@@ -64,22 +64,22 @@ namespace Cle::Renderer
 			gmesh->verticesDirty = false;
 			gmesh->modelPathDirty = false;
 			gmesh->modelIndexDirty = false;
-			gmesh->m_local_AABB.dirty = true;
-			gmesh->m_local_Bounding_Sphere.dirty = true;
+			gmesh->geometry->m_local_AABB.dirty = true;
+			gmesh->geometry->m_local_Bounding_Sphere.dirty = true;
 		}
 		if (gmesh->verticesDirty)
 		{
 			//glBindBuffer(GL_ARRAY_BUFFER,glmesh->m_VBO);
 			//glBufferSubData(GL_ARRAY_BUFFER, 0, gmesh->getVertices().size()*sizeof(Cle::Gfx::Vertex), gmesh->getVertices().data());
 			gmesh->verticesDirty = false;
-			gmesh->m_local_AABB.updateToWorld(gmesh->getVertices(), glm::mat4(1.0f));
+			gmesh->geometry->m_local_AABB.updateToWorld(gmesh->getVertices(), glm::mat4(1.0f));
 		}
 		if (gmesh->indicesDirty)
 		{
 			//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,glmesh->m_EBO);
 			//glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, gmesh->getIndices().size() * sizeof(unsigned int), gmesh->getIndices().data());
 			gmesh->indicesDirty = false;
-			gmesh->m_local_AABB.updateToWorld(gmesh->getVertices(), glm::mat4(1.0f));
+			gmesh->geometry->m_local_AABB.updateToWorld(gmesh->getVertices(), glm::mat4(1.0f));
 		}
 
 	}
@@ -95,13 +95,13 @@ bool Cle::Renderer::IRenderer::isWithinFarPlane(entt::entity entity, Cle::Gfx::C
 
 void Cle::Renderer::IRenderer::uploadMesh(entt::entity e, std::shared_ptr<Cle::GenericMesh> mesh, entt::registry& registry)
 {
-	auto m = Cle::AssetHandler::getInstance().getOrMakeMesh(mesh->getModelPath(), mesh->getMeshIndex());
-	registry.emplace_or_replace< std::shared_ptr<Cle::GenericMesh>>(e, m);
-	auto& bounds = registry.emplace_or_replace<Components::Bounds>(e, m->m_local_AABB, m->m_local_Bounding_Sphere);
+	//auto m = Cle::AssetHandler::getInstance().getOrMakeMesh(mesh->getModelPath(), mesh->getMeshIndex());
+	registry.emplace_or_replace< std::shared_ptr<Cle::GenericMesh>>(e, mesh);
+	auto& bounds = registry.emplace_or_replace<Components::Bounds>(e, mesh->geometry->m_local_AABB, mesh->geometry->m_local_Bounding_Sphere);
 
-	m->verticesDirty = true;
-	m->indicesDirty = true;
-	m->m_local_AABB.updateToWorld(m->getVertices(), glm::mat4(1.0f));
+	mesh->verticesDirty = true;
+	mesh->indicesDirty = true;
+	bounds.aabb.updateToWorld(mesh->getVertices(), glm::mat4(1.0f));
 
 }
 

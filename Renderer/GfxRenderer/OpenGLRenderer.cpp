@@ -20,6 +20,12 @@ using namespace Cle;
 static Cle::Gfx::Camera g_camera;
 void Cle::OPENGL::Renderer::beginFrame()
 {
+
+
+	//std::cout << "renderer gpu cache " << gpuMeshCache.size() << std::endl;
+	//std::cout << "unique geometry cache " << AssetHandler::getInstance().meshCache.size() << std::endl;
+
+
 	glfwPollEvents();
 	auto& lighting = Lighting::getInstance();
 
@@ -59,6 +65,7 @@ static float orthoHeight = 100.0f;
 static float orthoWidth = 100.0f;
 void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow* window)
 {
+
 	g_camera = m_camera;
 	using namespace Cle::Components;
 	
@@ -94,7 +101,7 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 			}
 		};
 	drawShadow();
-	
+
 	auto drawSceneDepth = [&](const glm::mat4& lightSpaceMatrix)
 		{
 			glCullFace(GL_FRONT);
@@ -159,10 +166,11 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 
 			glDepthMask(GL_TRUE);
-		};
+		};	
+
 	auto drawScene = [&]()
 		{
-			
+
 			lightingPass();
 
 			lightPass();
@@ -267,17 +275,26 @@ Cle::OPENGL::Renderer::Renderer(entt::registry* registry) {
 }
 std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh)
 {
-
-	if (!gpuMeshCache.contains(mesh))
+	/*
+	const auto& id = mesh->getGeoID();
+	if (!gpuMeshCache.contains(id))
 	{
 
-		gpuMeshCache[mesh] = std::make_shared<OPENGL::Mesh>(mesh);
-		gpuMeshCache[mesh]->gpuUploaded = true;
+		gpuMeshCache[id] = std::make_shared<OPENGL::Mesh>(mesh);
+		gpuMeshCache[id]->gpuUploaded = true;
 
 	}
 
-	return gpuMeshCache[mesh];
+	return gpuMeshCache[id];*/
 
+	auto glMesh = mesh->geometry;
+	
+	if (!mesh->geometry->gpuUploaded) {
+		mesh->geometry->gpuMesh = std::make_shared<OPENGL::Mesh>(mesh);
+		mesh->geometry->gpuUploaded = true;
+
+	}
+	return glMesh->gpuMesh;
 }
 std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::getOrMakeTexture(const std::string& path)
 {
@@ -322,6 +339,7 @@ static void onlightremoved(entt::registry& registry, entt::entity e)
 }
 void Cle::OPENGL::Renderer::setSettings()
 {
+	std::cout << 123;
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -377,6 +395,7 @@ std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::assignLOD(entt::entity e
 	auto gmesh = m_registry->get < std::shared_ptr<GenericMesh>>(entity);
 	auto imesh = getOrMakeMesh(gmesh);
 	std::shared_ptr<Cle::OPENGL::Mesh> openglmesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(imesh);
+	//return openglmesh;
 
 	float distance = glm::length2(viewPosition - m_registry->get<Cle::Components::Transform>(entity).getPosition());
 	const auto lodlist = openglmesh->getLodMesh();
@@ -394,7 +413,6 @@ std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::assignLOD(entt::entity e
 	lodmesh->m_VAO = openglmesh->m_VAO;
 	lodmesh->m_VBO = openglmesh->m_VBO;*/
 
-	return openglmesh;
 
 }
 
@@ -435,7 +453,6 @@ std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::phraseSkybox(std::vec
 
 void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera)
 {
-
 	if (!registry.any_of < std::shared_ptr<IShader>>(e))
 	{
 		registry.emplace_or_replace<std::shared_ptr<Cle::OPENGL::Shader>>(e, std::static_pointer_cast<Cle::OPENGL::Shader>(getDefaultShader()));
@@ -484,7 +501,6 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 			gmesh->m_local_AABB.updateToWorld(gmesh->getVertices(), transform.model);
 			gmesh->m_AABB.dirty = false;
 		}*/
-
 	if (registry.any_of < std::shared_ptr<Cle::Gfx::ITexture>>(e)) {
 		auto& tex = registry.get < std::shared_ptr<Cle::Gfx::ITexture>>(e);
 
@@ -515,9 +531,6 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 	glActiveTexture(GL_TEXTURE0 + shadowMapSlot);
 	glBindTexture(GL_TEXTURE_2D, shadowMap);
 	shaderCache["MeshShader"]->setInt("shadowMap", shadowMapSlot);
-
 	assignLOD(e, camera.Position)->draw();
-
-
 }
 

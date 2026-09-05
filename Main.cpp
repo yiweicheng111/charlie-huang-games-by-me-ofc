@@ -26,11 +26,11 @@ int main() {
 
 
 	//std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
-	//std::filesystem::current_path("../");
+	//std::filesystem::current_path("../");sa
 
 	std::cout << std::filesystem::current_path() << std::endl;;
 
-	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/house.gltf");
+/*	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
 	int i = 0;
@@ -41,14 +41,14 @@ int main() {
 
 	for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
-
+		break;
 		auto e = app.World->CreateDebugObject(I);
 		//app.registry.emplace<std::shared_ptr<ITexture>>(e, app.renderer->getOrMakeTexture("c.jpg"));
 		if (i == 0)
 		{
 			floor = e;
-			app.registry.emplace<std::shared_ptr<Cle::Audio::Sound>>(e, std::make_shared<Cle::Audio::Sound>("weeknd.mp3", &app.audio_engine));
-			app.registry.get<std::shared_ptr<Cle::Audio::Sound>>(e)->Play();
+		//	app.registry.emplace<std::shared_ptr<Cle::Audio::Sound>>(e, std::make_shared<Cle::Audio::Sound>("beatit.mp3", &app.audio_engine));
+			//app.registry.get<std::shared_ptr<Cle::Audio::Sound>>(e)->Play();
 			//app.m_UIHandler.m_Focused_Entity = floor;
 		}
 		else {
@@ -61,7 +61,7 @@ int main() {
 		//if (!gm.assimpRequestedDiffuse.empty()) gm.texture = app.renderer->createTexture(gm.assimpRequestedDiffuse);
 
 		i++;
-	}
+	}*/
 	std::cout << app.registry.storage<entt::entity>().size();
 
 	//Cle::Physics::Physics1::reg(app.registry);

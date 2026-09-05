@@ -1,4 +1,5 @@
 #include "World.h"
+#include "World.h"
 #include <cereal/cereal.hpp>
 #include <cereal/access.hpp>
 #include <cereal/types/string.hpp>
@@ -71,6 +72,23 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 	}
 
 	return newent;
+}
+
+std::vector<entt::entity> Cle::World::addModelToScene(const std::string& path)
+{
+	std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(path);
+	std::vector<entt::entity> entts;
+
+
+	for (auto& I : ModelLoaded) {
+		//std::cout << j << std::endl;
+
+		auto e = CreateDebugObject(I);
+		entts.push_back(e);
+		registry->get<Cle::Components::Color>(e).value = glm::vec4(I->assimpRequestedColor, 1);
+
+	}
+	return entts;
 }
 
 

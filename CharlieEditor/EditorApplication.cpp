@@ -17,7 +17,7 @@ void Cle::Editor::EditorApplication::updateAABBS() {
 		
 	
 			if (aabb.dirty) {
-				aabb = m->m_local_AABB;
+				aabb = m->geometry->m_local_AABB;
 				aabb.max *= t.getScale();
 				aabb.min *= t.getScale();
 				aabb.Translate(t.getPosition());
@@ -144,6 +144,7 @@ void Cle::Editor::EditorApplication::runHotKey()
 		m_camera->Position = registry.get<Transform>(m_UIHandler.m_Focused_Entity).getPosition();
 	}
 
+
 }
 
 void Cle::Editor::EditorApplication::runPointer()
@@ -180,7 +181,10 @@ void Cle::Editor::EditorApplication::Run()
 {
 	while (!glfwWindowShouldClose(window))
 	{
-
+		if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+			registry.clear();
+		;
+		}
 		bool key0 = false;
 		key0 = glfwGetKey(window, GLFW_KEY_0)==GLFW_PRESS;
 		/*if (key0&&Physics1::running)

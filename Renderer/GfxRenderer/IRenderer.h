@@ -18,9 +18,12 @@ namespace Cle::Renderer
 	class IRenderer
 	{
 	protected:
-		std::unordered_map<
+		/*std::unordered_map<
 			std::shared_ptr<
 			Cle::GenericMesh>,
+			std::shared_ptr<Cle::Gfx::IMesh>*/
+			std::unordered_map<
+			const void*,
 			std::shared_ptr<Cle::Gfx::IMesh>
 		> gpuMeshCache;
 		std::unordered_map<std::string, std::shared_ptr<Cle::Gfx::ITexture>> textureCache;
@@ -32,25 +35,41 @@ namespace Cle::Renderer
 
 		void onDeleteFunction(entt::registry& r, entt::entity e)
 		{
-			if (r.any_of< std::shared_ptr<Cle::GenericMesh>>(e))
+			std::cout << "onDeleteFunction fired for entity " << (uint32_t)e << "\n";
+
+			if (!r.any_of<std::shared_ptr<Cle::GenericMesh>>(e)) return;
+
+			auto& mesh = r.get<std::shared_ptr<Cle::GenericMesh>>(e);
+			std::string modelPath = mesh->getModelPath();
+			const void* geoId = mesh->getGeoID();
+			auto index = mesh->geometry->instancedIndex;
+
+			auto& vec = AssetHandler::getInstance().modelCache[modelPath];
+
+			AssetHandler::getInstance().UnloadModel(modelPath, index,mesh);
+			mesh.reset();
+
+		//	auto gpuIt = gpuMeshCache.find(geoId);
+	//		std::cout << "count " << gpuIt->second.use_count() << std::endl;
+		//	std::cout << "cache size assets " << AssetHandler::getInstance().meshCache.size() << std::endl;
+
+			/*if (gpuIt != gpuMeshCache.end() && gpuIt->second.use_count() <= 1)
 			{
-				auto& mesh = r.get< std::shared_ptr<Cle::GenericMesh>>(e);
+				std::cout << "needs to be deleted " << gpuMeshCache.size() << std::endl;
+				gpuMeshCache.erase(gpuIt);
 
+			}*/
+				
 
-				if (gpuMeshCache[mesh].use_count() <= 1)
-				{
-					gpuMeshCache.erase(mesh);
-				}
-
-			}
-			if (r.any_of< std::shared_ptr<Cle::Gfx::ITexture>>(e))
+			if (r.any_of<std::shared_ptr<Cle::Gfx::ITexture>>(e))
 			{
-				auto& tex = r.get< std::shared_ptr<Cle::Gfx::ITexture>>(e);
-				if (textureCache[tex->getPath()].use_count() <= 1)
-				{
-					textureCache.erase(tex->getPath());
-				}
+				auto& tex = r.get<std::shared_ptr<Cle::Gfx::ITexture>>(e);
+				auto texIt = textureCache.find(tex->getPath());
+				if (texIt != textureCache.end() && texIt->second.use_count() <= 1)
+					textureCache.erase(texIt);
 			}
+		//	std::cout << "called " << gpuMeshCache.size() << std::endl;
+
 		}
 		std::unordered_map<std::string, std::shared_ptr<IShader>> shaderCache;
 

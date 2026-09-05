@@ -4,9 +4,9 @@
 #include "EBO.h"
 using namespace Cle::OPENGL;
 using namespace Cle::Gfx;
-
 void Cle::OPENGL::Mesh::draw()
 {
+	
 	glBindVertexArray(m_VAO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
 

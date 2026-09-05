@@ -36,6 +36,7 @@ void Cle::Network::connectServer(int port, std::string ip)
 
 void Cle::Network::poll()
 {
+
     ENetEvent event;
     while (enet_host_service(client, &event, 0) > 0)
     {
