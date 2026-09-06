@@ -19,6 +19,7 @@ std::vector<Vertex> vertices = {
 };
 
 int main() {
+
 	srand(time(NULL));
 	//Cle::Editor::EditorApplication app;
 	Cle::Editor::EditorApplication app;
@@ -29,7 +30,11 @@ int main() {
 	//std::filesystem::current_path("../");sa
 
 	std::cout << std::filesystem::current_path() << std::endl;;
-
+	auto scripttest = app.World->CreateDebugObject();
+	app.registry.emplace<Cle::Script>(scripttest,"Scripts/script.lua");
+	app.registry.get<Cle::Components::Name>(scripttest).setName("script");
+	std::cout << app.registry.get<Cle::Script>(scripttest).path << std::endl;
+	app.World->addModelToScene("map/c.gltf");
 /*	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
@@ -68,6 +73,7 @@ int main() {
 	//Cle::Physics::Physics1::physicssystem->GetBodyInterface().SetMotionType(app.registry.get<Cle::Components::PhysicsComponent>(floor).ID, JPH::EMotionType::Static, JPH::EActivation::Activate);
 
 	glm::vec3 pos = app.m_camera->Position;
+	Cle::ScriptHandler::getInstance();
 	app.Run();
 	glfwTerminate();
 	return 0;

@@ -14,7 +14,6 @@ namespace Cle
         std::vector<unsigned int> Indices;
         Cle::Components::AABB m_local_AABB;
         Cle::Components::Sphere m_local_Bounding_Sphere;
-        std::shared_ptr<Cle::Gfx::IMesh> gpuMesh;
         bool gpuUploaded = false;
         int instancedIndex = 0;
         MeshGeometry()

@@ -1,30 +1,51 @@
 #pragma once
 #include <iostream>
 #include <string>
-#include "IRenderer.h"
-extern "C" {
-	#include "lua/lua.h"
-	#include "lua/lauxlib.h"
-	#include "lua/lualib.h"
-}
+#include "sol/sol.hpp"
 #include <filesystem>
-namespace Cle::Scripting
+#include "lua/lua.h"
+#include "entt/entt.hpp"
+namespace Cle
 {
+	class World;
+	struct Script
+	{
+		std::string path;
+		Script(const std::string& p) : path(p) {}
+		bool enabled = true;
+		bool ran = false;
+	};
+	struct LuaEntity
+	{
+		entt::entity entity;
+		entt::registry* registry;
+		
+	};
 	class ScriptHandler
 	{
 	public:
+		sol::state lua;
+		entt::registry* registry;
+		void setVariables(Cle::World* world,entt::registry* registry);
+		ScriptHandler(const ScriptHandler&) = delete;
+		ScriptHandler& operator=(const ScriptHandler&) = delete;
+
+		ScriptHandler(ScriptHandler&&) = delete;
+		ScriptHandler& operator=(ScriptHandler&&) = delete;
+
+		std::vector<LuaEntity> getchildren(const std::string& name);
+		void run();
+
 		static ScriptHandler& getInstance()
 		{
-			ScriptHandler instance;
+			static ScriptHandler instance;
 			return instance;
 		}
-		bool checkErrors(int r);
-		void runFile(std::string path);
-		ScriptHandler() {
-			luaL_openlibs(m_lua_State);
-		};
+
 	private:
-		lua_State* m_lua_State = luaL_newstate();
+		Cle::World* world;
+
+		ScriptHandler();
 	};
 
-}
+};

@@ -7,6 +7,16 @@
 using namespace Cle::Gfx;
 namespace Cle
 {
+	struct CachedMeshInfo
+	{
+		std::vector<Cle::Gfx::Vertex> Vertices;
+		std::vector<unsigned int> Indices;
+		glm::vec3 scaleOffset = glm::vec3(1.0f);
+		glm::vec3 positionOffset = glm::vec3(0.0f);
+		glm::quat orientationOffset;
+		glm::vec3 assimpRequestedColor = glm::vec3(-1, -1, -1);
+		std::string assimpRequestedDiffuse = "";
+	};
 	class AssetHandler {
 	private:
 		AssetHandler() = default;
@@ -27,7 +37,7 @@ namespace Cle
 		std::unordered_map<std::pair<std::string,int>, std::shared_ptr<MeshGeometry>,pairhash> meshCache;
 		std::unordered_map<std::string, std::vector< std::shared_ptr<GenericMesh>>> modelCache;
 
-		void UnloadModel(const std::string& path, int index, std::shared_ptr<GenericMesh>& gmeshp)
+		bool UnloadModel(const std::string& path, int index, std::shared_ptr<GenericMesh>& gmeshp)
 		{
 			//std::cout << path << index <<std::endl;
 
@@ -37,21 +47,20 @@ namespace Cle
 			{
 			//	std::cout << " note here" << std::endl;
 
-				return;
+				return false;
 			}
 
 			auto& meshPtr = meshCache[{path, index}];
-			std::cout << meshPtr.use_count() << std::endl;
+			std::cout << "ptr used " << meshPtr.use_count() << std::endl;
 			auto& vec = modelCache[path];
-			vec.erase(std::remove(vec.begin(), vec.end(), gmeshp), vec.end());
-			std::cout << "a\n";
-			if (meshPtr.use_count() > 2){
-				//std::cout << "still some instances cant delete yet\n";
-				return;  
+		    vec.erase(std::remove(vec.begin(), vec.end(), gmeshp), vec.end());
+			if (meshPtr.use_count() > 3){
+				std::cout << "still some instances cant delete yet\n";
+				return false;  
 			}
-
 			std::cout << "erased\n";
 			meshCache.erase(it);
+			return true;
 
 		}
 

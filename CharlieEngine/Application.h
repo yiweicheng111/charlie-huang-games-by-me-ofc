@@ -17,7 +17,6 @@ namespace Cle::Core
 	{
 	public:
 		Network* m_network;
-		Cle::Scripting::ScriptHandler* m_ScriptHandler;
 		Cle::Gfx::Camera owned_camera;
 		Cle::Gfx::Camera* m_camera;
 		entt::registry registry;

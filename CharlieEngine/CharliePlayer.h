@@ -7,7 +7,7 @@ namespace Cle
 	{
 	public:
 		bool mapLoading = false;
-		Cle::Scripting::ScriptHandler m_ScriptHandler;
+		//Cle::Scripting::ScriptHandler m_ScriptHandler;
 
 		~RunnableApplication();
 		RunnableApplication();

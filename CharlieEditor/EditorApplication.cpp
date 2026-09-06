@@ -75,7 +75,7 @@ Cle::Editor::EditorApplication::EditorApplication()
 	renderer->setSettings();
 	World = std::make_unique<Cle::World>(&registry, *renderer);
 
-	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
+	//m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	registry.ctx().emplace<Camera>(Camera());
 	m_camera = &registry.ctx().get<Camera>();
 	Network::setRegistry(&registry);
@@ -140,7 +140,7 @@ void Cle::Editor::EditorApplication::runHotKey()
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS && registry.valid(m_UIHandler.m_Focused_Entity)) {
 		registry.destroy(m_UIHandler.m_Focused_Entity);
 	}
-	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && registry.valid(m_UIHandler.m_Focused_Entity)) {
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && registry.valid(m_UIHandler.m_Focused_Entity) && registry.any_of<Transform>(m_UIHandler.m_Focused_Entity)) {
 		m_camera->Position = registry.get<Transform>(m_UIHandler.m_Focused_Entity).getPosition();
 	}
 
@@ -183,7 +183,8 @@ void Cle::Editor::EditorApplication::Run()
 	{
 		if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
 			registry.clear();
-		;
+			std::cout << "meshCache size: " << AssetHandler::getInstance().meshCache.size() << "\n";
+			std::cout << "modelCache size: " << AssetHandler::getInstance().modelCache.size() << "\n";
 		}
 		bool key0 = false;
 		key0 = glfwGetKey(window, GLFW_KEY_0)==GLFW_PRESS;
@@ -202,7 +203,7 @@ void Cle::Editor::EditorApplication::Run()
 
 		renderer->clearFrame(window);
 		m_network->poll();
-
+		ScriptHandler::getInstance().run();
 
 	}
 }

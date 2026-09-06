@@ -65,7 +65,6 @@ Cle::RunnableApplication::RunnableApplication()
 	renderer->setSettings();
 	World = std::make_unique<Cle::World>(&registry, *renderer);
 
-	m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 
 	if (!registry.ctx().contains<Camera>())
 	{

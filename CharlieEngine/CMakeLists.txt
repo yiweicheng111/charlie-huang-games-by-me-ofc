@@ -32,8 +32,10 @@ file(GLOB_RECURSE EngineFiles
     "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
     "${PROJECT_SOURCE_DIR}/Library/vendor/miniaudio/*.c"
 )
-
-add_library(CharlieEngine STATIC ${EngineFiles})
+file(GLOB lua
+    "${PROJECT_SOURCE_DIR}/Library/vendor/lua/*.c"
+)
+add_library(CharlieEngine STATIC ${EngineFiles} ${lua})
 
 target_include_directories(CharlieEngine PUBLIC
     "${PROJECT_SOURCE_DIR}/Library/vendor"

@@ -275,26 +275,25 @@ Cle::OPENGL::Renderer::Renderer(entt::registry* registry) {
 }
 std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh)
 {
-	/*
-	const auto& id = mesh->getGeoID();
+	
+	auto id = mesh->geometry;
 	if (!gpuMeshCache.contains(id))
 	{
-
 		gpuMeshCache[id] = std::make_shared<OPENGL::Mesh>(mesh);
 		gpuMeshCache[id]->gpuUploaded = true;
 
 	}
+	
+	return gpuMeshCache[id];
 
-	return gpuMeshCache[id];*/
-
-	auto glMesh = mesh->geometry;
+	/*auto glMesh = mesh->geometry;
 	
 	if (!mesh->geometry->gpuUploaded) {
 		mesh->geometry->gpuMesh = std::make_shared<OPENGL::Mesh>(mesh);
 		mesh->geometry->gpuUploaded = true;
 
 	}
-	return glMesh->gpuMesh;
+	return glMesh->gpuMesh;*/
 }
 std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::getOrMakeTexture(const std::string& path)
 {

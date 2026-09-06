@@ -12,8 +12,7 @@ namespace Cle::Editor
 	{
 	public:
 		bool mapLoading = false;
-		entt::entity player;
-		Cle::Scripting::ScriptHandler m_ScriptHandler;
+		//Cle::Scripting::ScriptHandler m_ScriptHandler;
 	    std::unique_ptr<Cle::CameraController> m_Controller;
 		//Cle::ObjectCameraController m_Controller;
 		Cle::Editor::EditorUI m_UIHandler;

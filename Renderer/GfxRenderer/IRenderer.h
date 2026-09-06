@@ -23,7 +23,7 @@ namespace Cle::Renderer
 			Cle::GenericMesh>,
 			std::shared_ptr<Cle::Gfx::IMesh>*/
 			std::unordered_map<
-			const void*,
+			std::shared_ptr<MeshGeometry>,
 			std::shared_ptr<Cle::Gfx::IMesh>
 		> gpuMeshCache;
 		std::unordered_map<std::string, std::shared_ptr<Cle::Gfx::ITexture>> textureCache;
@@ -35,30 +35,34 @@ namespace Cle::Renderer
 
 		void onDeleteFunction(entt::registry& r, entt::entity e)
 		{
-			std::cout << "onDeleteFunction fired for entity " << (uint32_t)e << "\n";
+		//	std::cout << "onDeleteFunction fired for entity " << (uint32_t)e << "\n";
 
 			if (!r.any_of<std::shared_ptr<Cle::GenericMesh>>(e)) return;
 
 			auto& mesh = r.get<std::shared_ptr<Cle::GenericMesh>>(e);
 			std::string modelPath = mesh->getModelPath();
-			const void* geoId = mesh->getGeoID();
+			auto& geoId = mesh->geometry;
 			auto index = mesh->geometry->instancedIndex;
 
 			auto& vec = AssetHandler::getInstance().modelCache[modelPath];
 
-			AssetHandler::getInstance().UnloadModel(modelPath, index,mesh);
+			bool shouldRemove = AssetHandler::getInstance().UnloadModel(modelPath, index,mesh);
 			mesh.reset();
-
-		//	auto gpuIt = gpuMeshCache.find(geoId);
-	//		std::cout << "count " << gpuIt->second.use_count() << std::endl;
-		//	std::cout << "cache size assets " << AssetHandler::getInstance().meshCache.size() << std::endl;
-
-			/*if (gpuIt != gpuMeshCache.end() && gpuIt->second.use_count() <= 1)
+			if (shouldRemove)
 			{
-				std::cout << "needs to be deleted " << gpuMeshCache.size() << std::endl;
-				gpuMeshCache.erase(gpuIt);
+				std::cout << "erased\n";
+				gpuMeshCache.erase(geoId);
+			}
 
-			}*/
+		 	auto gpuIt = gpuMeshCache.find(geoId);
+	    	//std::cout << "count " << gpuIt->second.use_count() << std::endl;
+			std::cout << "gpu mesh cache size " << gpuMeshCache.size() << std::endl;
+
+			//if (gpuIt != gpuMeshCache.end() && gpuIt->second.use_count() <= 1)
+			//{
+			//	std::cout << "needs to be deleted " << gpuMeshCache.size() << std::endl;
+
+		//	}
 				
 
 			if (r.any_of<std::shared_ptr<Cle::Gfx::ITexture>>(e))

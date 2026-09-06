@@ -43,14 +43,23 @@ namespace Cle::Editor
 			}
 			std::string name = m_registry->get<Cle::Components::Name>(child).getName();
 			ImGui::PushID((int)child);
-			bool open = ImGui::TreeNode(name.c_str());
 			DrawContextMenu(child);
+			if (m_Focused_Entity == child) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
+			else ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Framed);
+
+			if (open && ImGui::IsItemToggledOpen())
+			{
+				m_Focused_Entity = child;
+			}
+
 			if (open)
 			{
 				DrawChildren(child);
 
 				ImGui::TreePop();
 			}
+			ImGui::PopStyleColor();
 
 			ImGui::PopID();
 		}
@@ -244,28 +253,7 @@ namespace Cle::Editor
 
 			}
 		}
-		if (ImGui::TreeNodeEx("Network Visibility", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			if (ImGui::RadioButton("Client", m_registry->any_of<ClientOnly>(m_Focused_Entity)))
-			{
-				m_registry->emplace_or_replace< ClientOnly>(m_Focused_Entity);
-				m_registry->remove<Replicated>(m_Focused_Entity);
-				m_registry->remove<ServerOnly>(m_Focused_Entity);
-			}
-			if (ImGui::RadioButton("Server", m_registry->any_of<ServerOnly>(m_Focused_Entity)))
-			{
-				m_registry->emplace_or_replace< ServerOnly>(m_Focused_Entity);
-				m_registry->remove<Replicated>(m_Focused_Entity);
-				m_registry->remove<ClientOnly>(m_Focused_Entity);
-			}
-			if (ImGui::RadioButton("Replicated", m_registry->any_of<Replicated>(m_Focused_Entity)))
-			{
-				m_registry->emplace_or_replace<Replicated>(m_Focused_Entity);
-				m_registry->remove<ClientOnly>(m_Focused_Entity);
-				m_registry->remove<ServerOnly>(m_Focused_Entity);
-			}
-			ImGui::TreePop();
-		}
+		
 		ImGui::End();
 	}
 	void EditorUI::DrawTopBar()
@@ -285,8 +273,8 @@ namespace Cle::Editor
 		{
 			if (ImGui::Selectable("Cube"))
 			{
-				//auto ents = World->addModelToScene("primitives/cube.gltf");
-				auto ents = World->addModelToScene("map/g.gltf");
+				auto ents = World->addModelToScene("primitives/cube.gltf");
+				//auto ents = World->addModelToScene("map/g.gltf");
 
 				if (ents.size()>=1) m_Focused_Entity = ents.at(0);
 			}
