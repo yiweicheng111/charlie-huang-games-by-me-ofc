@@ -18,16 +18,28 @@ void registerName(const std::string& name)
 {
     propertyNames[entt::hashed_string(name.c_str()).value()] = name;
 }
+static void registerMeshProxy(entt::registry& registry, entt::entity e)
+{
+    if (!registry.all_of<MeshMeta>(e))
+    {
+        MeshMeta m(e, &registry);
+        registry.emplace_or_replace<MeshMeta>(e, m);
+    }
+       
+}
 using namespace entt::literals;
 namespace Cle
 {
     std::vector< typeInfo> registeredComponents;
     std::unordered_map< entt::id_type, std::string> propertyNames;
-    void RegisterReflection()
+    void Cle::RegisterReflection(entt::registry* registry)
     {
+        registry->on_construct<std::shared_ptr<GenericMesh>>().connect<&registerMeshProxy>();
+
         entt::meta_factory<float>{};
         entt::meta_factory<std::string>{};
         entt::meta_factory<bool>{};
+        entt::meta_factory<int>{};
 
         entt::meta_factory<glm::vec3>{}  
             .data<&glm::vec3::x>("x"_hs)
@@ -67,11 +79,11 @@ namespace Cle
         registerName("Color");
 
 
-        entt::meta_factory<Cle::GenericMesh>{}
-        .data<&Cle::GenericMesh::setModelPath,&Cle::GenericMesh::getModelPath>("Path"_hs)
-        .data<&Cle::GenericMesh::setMeshIndex, &Cle::GenericMesh::getMeshIndex>("Index"_hs);
+        entt::meta_factory<Cle::MeshMeta>{}
+        .data<&Cle::MeshMeta::setModelPath,&Cle::MeshMeta::getModelPath>("Path"_hs)
+        .data<&Cle::MeshMeta::setMeshIndex, &Cle::MeshMeta::getMeshIndex>("Index"_hs);
 
-        registerComponent<Cle::GenericMesh>("Mesh");
+        registerComponent<Cle::MeshMeta>("Mesh");
 
         registerName("Index");
         registerName("Path");

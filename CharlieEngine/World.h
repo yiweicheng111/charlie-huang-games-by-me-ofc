@@ -27,7 +27,7 @@ namespace Cle {
 
 			Cle::ScriptHandler::getInstance().setVariables(this, registry);
 
-			Cle::RegisterReflection();
+			Cle::RegisterReflection(registry);
 
 		}
 		entt::entity CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMesh);

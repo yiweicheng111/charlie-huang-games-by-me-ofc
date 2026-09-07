@@ -50,11 +50,14 @@ namespace Cle::Renderer
 
 
 		auto& gmesh = m_registry->get<std::shared_ptr<GenericMesh>>(entity);
-
 		if (gmesh->modelPathDirty || gmesh->modelIndexDirty)
 		{
 
 			const auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(gmesh->getModelPath());
+			if (gmesh->getMeshIndex() > ModelLoaded.size())
+			{
+				gmesh->setMeshIndex(ModelLoaded.size() - 1);
+			}
 
 			uploadMesh(entity, ModelLoaded.at(gmesh->getMeshIndex()), *m_registry);
 

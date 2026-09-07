@@ -1,6 +1,7 @@
 #pragma once
 #include "CharlieEngine/Components.h"
 #include "Mesh.h"
+#include <entt/entt.hpp>
 namespace Cle
 {
     namespace Gfx
@@ -137,9 +138,31 @@ namespace Cle
             ar(ModelPath, loadedMeshIndex);
         }
     };
-    struct MeshComponent
+    struct MeshMeta
     {
-        Cle::GenericMesh* mesh = nullptr;
-        MeshComponent(Cle::GenericMesh* m) : mesh(m) {}
+        entt::entity owner;
+        entt::registry* registry;
+        MeshMeta(entt::entity o, entt::registry* r) : owner(o), registry(r) {}
+        void setModelPath(std::string p)
+        {
+            auto& mesh = registry->get<std::shared_ptr<Cle::GenericMesh>>(owner);
+            if (mesh) mesh->setModelPath(p);
+        }
+        std::string getModelPath() const
+        {
+            auto& mesh = registry->get<std::shared_ptr<Cle::GenericMesh>>(owner);
+            return mesh ? mesh->getModelPath() : "";
+        }
+        void setMeshIndex(int i)
+        {
+            auto& mesh = registry->get<std::shared_ptr<Cle::GenericMesh>>(owner);
+            if (mesh) mesh->setMeshIndex(i);
+            else std::cout << "no mesh\n";
+        }
+        int getMeshIndex() const
+        {
+            auto& mesh = registry->get<std::shared_ptr<Cle::GenericMesh>>(owner);
+            return mesh ? mesh->getMeshIndex() : -1;
+        }
     };
 }

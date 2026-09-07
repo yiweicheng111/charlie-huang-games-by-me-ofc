@@ -37,7 +37,7 @@ int main() {
 	//app.registry.get<Cle::Audio::Sound>(scripttest).Play();
 
 	std::cout << app.registry.get<Cle::Script>(scripttest).path << std::endl;
-	app.World->addModelToScene("map/g.gltf");
+	app.World->addModelToScene("map/f.gltf");
 /*	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 

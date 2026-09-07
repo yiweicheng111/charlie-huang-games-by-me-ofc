@@ -158,6 +158,14 @@ namespace Cle::Editor
 								subprop.data.set(instance, v);
 							}
 						}
+						else if (subprop.type == entt::resolve<int>())
+						{
+							auto v = subprop.data.get(instance).cast<int>();
+							if (ImGui::DragInt(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
 						else if (subprop.type == entt::resolve<std::string>())
 						{
 							auto v = subprop.data.get(instance).cast<std::string>();

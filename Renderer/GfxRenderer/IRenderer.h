@@ -36,7 +36,7 @@ namespace Cle::Renderer
 		void onDeleteFunction(entt::registry& r, entt::entity e)
 		{
 		//	std::cout << "onDeleteFunction fired for entity " << (uint32_t)e << "\n";
-
+			
 			if (!r.any_of<std::shared_ptr<Cle::GenericMesh>>(e)) return;
 
 			auto& mesh = r.get<std::shared_ptr<Cle::GenericMesh>>(e);
