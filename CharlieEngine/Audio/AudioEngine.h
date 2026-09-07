@@ -13,11 +13,14 @@ namespace Cle::Audio {
 		
 	public:
 		float volume = 1;
-		bool isPlaying()
+		bool isPlaying() const
 		{
 			return playing;
 		}
-
+		void setPlaying(bool v)
+		{
+			playing = v;
+		}
 		ma_sound sound;
 		bool global = false;
 		ma_engine* engine;
@@ -27,7 +30,7 @@ namespace Cle::Audio {
 			ma_sound_uninit(&sound);
 		}
 		explicit Sound(std::string path, ma_engine* engine) : path(path), engine(engine) {
-			ma_sound_init_from_file(engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE, nullptr, nullptr, &sound);
+			ma_sound_init_from_file(engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_STREAM, nullptr, nullptr, &sound);
 			ma_sound_seek_to_pcm_frame(&sound, 0);
 			ma_sound_set_end_callback(&sound, [](void* pUserData, ma_sound* pSound) {
 				auto pl = static_cast<bool*>(pUserData);
@@ -35,13 +38,22 @@ namespace Cle::Audio {
 				}, &playing);
 
 		}
-		void setPath(std::string newPath)
+		explicit Sound(std::string path, ma_engine* engine,bool globa) : path(path), engine(engine), global(globa) {
+			ma_sound_init_from_file(engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_STREAM, nullptr, nullptr, &sound);
+			ma_sound_seek_to_pcm_frame(&sound, 0);
+			ma_sound_set_end_callback(&sound, [](void* pUserData, ma_sound* pSound) {
+				auto pl = static_cast<bool*>(pUserData);
+				*pl = false;
+				}, &playing);
+
+		}
+		 void setPath(std::string newPath)
 		{
 			ma_sound_uninit(&sound);
 			ma_sound_init_from_file(engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE, nullptr, nullptr, &sound);
 			path = newPath;
 		}
-		std::string getPath() const
+		 std::string getPath() const
 		{
 			return path;
 		}

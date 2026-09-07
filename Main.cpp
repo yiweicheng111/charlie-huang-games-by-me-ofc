@@ -21,8 +21,8 @@ std::vector<Vertex> vertices = {
 int main() {
 
 	srand(time(NULL));
-	//Cle::Editor::EditorApplication app;
 	Cle::Editor::EditorApplication app;
+	//Cle::RunnableApplication app;
 	app.m_network->connectServer(8080,"127.0.0.1");
 
 
@@ -33,8 +33,11 @@ int main() {
 	auto scripttest = app.World->CreateDebugObject();
 	app.registry.emplace<Cle::Script>(scripttest,"Scripts/script.lua");
 	app.registry.get<Cle::Components::Name>(scripttest).setName("script");
+	app.registry.emplace<Cle::Audio::Sound>(scripttest,"beatit.mp3",&app.audio_engine,true);
+	//app.registry.get<Cle::Audio::Sound>(scripttest).Play();
+
 	std::cout << app.registry.get<Cle::Script>(scripttest).path << std::endl;
-	app.World->addModelToScene("map/c.gltf");
+	app.World->addModelToScene("map/g.gltf");
 /*	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
@@ -73,7 +76,8 @@ int main() {
 	//Cle::Physics::Physics1::physicssystem->GetBodyInterface().SetMotionType(app.registry.get<Cle::Components::PhysicsComponent>(floor).ID, JPH::EMotionType::Static, JPH::EActivation::Activate);
 
 	glm::vec3 pos = app.m_camera->Position;
-	Cle::ScriptHandler::getInstance();
+	Cle::ScriptHandler::getInstance();			
+
 	app.Run();
 	glfwTerminate();
 	return 0;

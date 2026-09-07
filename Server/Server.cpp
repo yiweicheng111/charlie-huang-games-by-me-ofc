@@ -141,7 +141,7 @@ void Cle::Server::onJoin(ENetPeer* peer)
 		cereal::BinaryOutputArchive ar(oss);
 		std::vector<EntityPacket> packets;
 		int ents = 0;
-		for (auto ent : registry.view<Replicated>())
+		for (auto ent : registry.view<entt::entity>())
 		{
 			ents++;
 			EntityPacket entityp;

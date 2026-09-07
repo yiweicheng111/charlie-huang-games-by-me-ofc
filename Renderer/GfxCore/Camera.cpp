@@ -44,16 +44,3 @@ glm::vec3 Cle::Gfx::Camera::getRight() const
 glm::vec3 Cle::Gfx::Camera::getUp() const {
 	return glm::cross(getRight(), getForward());
 }
-glm::mat4 Cle::Components::Transform::computeMatrix()
-{
-	if (dirty)
-	{
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, position);
-		model *= glm::mat4_cast(orientation);
-		model = glm::scale(model, scale);
-		dirty = false;
-	}
-	return model;
-
-}

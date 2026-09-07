@@ -123,11 +123,83 @@ namespace Cle::Editor
 		auto name = m_registry->try_get<Name>(m_Focused_Entity);
 
 		auto mesh = m_registry->try_get<std::shared_ptr<Cle::GenericMesh>>(m_Focused_Entity);
-		std::shared_ptr<Cle::Audio::Sound>* soundptr = m_registry->try_get<std::shared_ptr<Cle::Audio::Sound>>(m_Focused_Entity);
+		Cle::Audio::Sound* soundptr = m_registry->try_get<Cle::Audio::Sound>(m_Focused_Entity);
 
 		Cle::Components::CubeMapTexture* cubeMap = m_registry->try_get<Cle::Components::CubeMapTexture>(m_Focused_Entity);
+		auto properties = Cle::GetEntityProperties(*m_registry,m_Focused_Entity);
+		for (const auto& prop : properties)
+		{
 		
-		if (name)
+				if (ImGui::TreeNodeEx(prop.parentName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					for (const auto& subprop : prop.properties)
+					{
+						auto meta = entt::resolve(subprop.componentType);
+						if (!meta)
+							continue;
+						auto storage = m_registry->storage(subprop.componentType);
+						if (!storage || !storage->contains(m_Focused_Entity))
+							continue;
+						auto instance = meta.from_void(storage->value(m_Focused_Entity));
+
+						if (subprop.type == entt::resolve<float>())
+						{
+							auto v = subprop.data.get(instance).cast<float>();
+							if (ImGui::DragFloat(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<bool>())
+						{
+							auto v = subprop.data.get(instance).cast<bool>();
+							if (ImGui::Selectable(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<std::string>())
+						{
+							auto v = subprop.data.get(instance).cast<std::string>();
+
+							if (ImGui::InputText(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<glm::vec3>())
+						{
+							auto v = subprop.data.get(instance).cast<glm::vec3>();
+
+							if (ImGui::DragFloat3(subprop.name.c_str(), glm::value_ptr(v)))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<glm::vec4>())
+						{
+							auto v = subprop.data.get(instance).cast<glm::vec4>();
+
+							if (ImGui::DragFloat4(subprop.name.c_str(), glm::value_ptr(v)))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<glm::quat>())
+						{
+							auto v = glm::eulerAngles(subprop.data.get(instance).cast< glm::quat>());
+
+							if (ImGui::DragFloat3(subprop.name.c_str(), glm::value_ptr(v)))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+					}
+
+					ImGui::TreePop();	
+				}
+		}
+		/*if (name)
 		{
 			if (ImGui::TreeNodeEx("Name", ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -140,27 +212,26 @@ namespace Cle::Editor
 		}
 		if (soundptr)
 		{
-			auto sound = *soundptr;
 			if (ImGui::TreeNodeEx("Sound", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				std::string soundPath = sound->getPath();
-				float timePosition = sound->getTimePosition();
-				bool playing = sound->isPlaying();
-				ImGui::DragFloat("Volume", &sound->volume);
+				std::string soundPath = soundptr->getPath();
+				float timePosition = soundptr->getTimePosition();
+				bool playing = soundptr->isPlaying();
+				ImGui::DragFloat("Volume", &soundptr->volume);
 				if (ImGui::InputText("Path", &soundPath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					sound->setPath(soundPath);
+					soundptr->setPath(soundPath);
 				}
 				if (ImGui::DragFloat("Time position", &timePosition) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					sound->setTimePosition(timePosition);
+					soundptr->setTimePosition(timePosition);
 				}
 				if (ImGui::Checkbox("Playing", &playing))
 				{
-					if (!playing) sound->Pause();
-					else sound->Play();
+					if (!playing) soundptr->Pause();
+					else soundptr->Play();
 				}
-				if (ImGui::Checkbox("Global", &sound->global))
+				if (ImGui::Checkbox("Global", &soundptr->global))
 				{
 				}
 				ImGui::TreePop();
@@ -252,7 +323,7 @@ namespace Cle::Editor
 				ImGui::TreePop();
 
 			}
-		}
+		}*/
 		
 		ImGui::End();
 	}

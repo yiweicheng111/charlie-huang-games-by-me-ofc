@@ -182,9 +182,7 @@ void Cle::Editor::EditorApplication::Run()
 	while (!glfwWindowShouldClose(window))
 	{
 		if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
-			registry.clear();
-			std::cout << "meshCache size: " << AssetHandler::getInstance().meshCache.size() << "\n";
-			std::cout << "modelCache size: " << AssetHandler::getInstance().modelCache.size() << "\n";
+		
 		}
 		bool key0 = false;
 		key0 = glfwGetKey(window, GLFW_KEY_0)==GLFW_PRESS;
@@ -200,7 +198,6 @@ void Cle::Editor::EditorApplication::Run()
 		Render();
 
 		Update(0.1f);
-
 		renderer->clearFrame(window);
 		m_network->poll();
 		ScriptHandler::getInstance().run();

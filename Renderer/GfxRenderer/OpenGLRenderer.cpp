@@ -204,6 +204,7 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 				}
 
 				});
+		//	std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 
 		};
 	//static int width, height;
@@ -262,7 +263,6 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 	//beginFrame();
 
 //	drawScene();
-	//std::cout << "Meshes: " << totalMeshes << " Drawn: " << totalDrawn << std::endl;
 }
 Cle::OPENGL::Renderer::Renderer(entt::registry* registry) {
 	m_registry = registry;

@@ -6,7 +6,6 @@ using namespace Cle::OPENGL;
 using namespace Cle::Gfx;
 void Cle::OPENGL::Mesh::draw()
 {
-	
 	glBindVertexArray(m_VAO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
 
@@ -21,6 +20,7 @@ void Cle::OPENGL::Mesh::draw()
 
 void Cle::OPENGL::Mesh::draw(unsigned int nebo, unsigned int count)
 {
+
 	glBindVertexArray(m_VAO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, nebo);
 

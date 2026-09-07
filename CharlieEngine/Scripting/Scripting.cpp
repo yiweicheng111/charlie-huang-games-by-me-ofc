@@ -1,16 +1,26 @@
 #include "Scripting.h"
-#include "Scripting.h"
 #include "shared.h"
 #include "World.h"
 using namespace Cle;
+static sol::object findFirstChild(const std::string& name,entt::registry* registry,sol::state_view lua)
+{
+	for (auto i : registry->view<Cle::Components::Name>())
+	{
+		auto n = registry->get<Cle::Components::Name>(i);
+		if (n.getName() == name)
+		{
+			return sol::make_object(lua,LuaEntity{ i,registry});
+		}
+	}
+	return sol::nil;
+}
 void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 {
 	this->world = world;
 	this->registry = registry;
 	lua.open_libraries(sol::lib::base,sol::lib::coroutine);
-	lua.new_usertype< Cle::Components::Transform>("Transform",
-		"position", sol::property(&Cle::Components::Transform::getPosition, &Cle::Components::Transform::setPosition)
-	);
+
+
 
 	lua.new_usertype<glm::vec3>("Vector3",
 		sol::constructors<glm::vec3(),glm::vec3(float,float,float)>(),
@@ -21,58 +31,147 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 
 	lua.new_usertype<LuaEntity>(
 		"Entity",
+		"GetChildren", [this](LuaEntity& entity) {
+			auto v = this->registry->try_get<Cle::Components::TreeInfo>(entity.entity);
+			std::vector< LuaEntity> lv;
 
+			if (!v) return sol::as_table(lv);
+
+			for (auto& ent : v->getChildren())
+			{
+				lv.push_back({ ent,this->registry });
+			}
+			return sol::as_table(lv);
+		},
+		"Parent", sol::property([this](LuaEntity& entity) {
+			auto v = this->registry->try_get<Cle::Components::TreeInfo>(entity.entity);
+
+			if (!v) return sol::make_object(lua,sol::nil);
+
+		
+			return sol::make_object(lua, LuaEntity{ v->getParent(),this->registry});
+		}),
+	
 		sol::meta_function::index,
 		[this](LuaEntity& entity, const std::string& key) -> sol::object
 		{
+
+			auto registry = this->registry;
 			if (entity.entity == entt::null ||
-				!this->registry->valid(entity.entity))
+				!registry->valid(entity.entity))
 			{
 				return sol::make_object(lua, sol::nil);
 			}
-
-			if (key == "transform")
+			for (const auto& component : registeredComponents)
 			{
-				if (!this->registry->all_of<Cle::Components::Transform>(entity.entity))
-				{
-					return sol::make_object(lua, sol::nil);
-				}
+		
 
-				Cle::Components::Transform& transform =
-					this->registry->get<Cle::Components::Transform>(entity.entity);
+				if (component.name != key)
+					continue;
+
+
+				auto storage = registry->storage(component.id);
+
+				if (!storage || !storage->contains(entity.entity))
+					return sol::make_object(lua, sol::nil);
 
 				return sol::make_object(
 					lua,
-					std::ref(transform)
+					LuaComponent{
+						entity.entity,
+						component.id,
+						registry
+					}
 				);
 			}
 
-			auto children = getchildren(key);
-
-			if (!children.empty())
+			return findFirstChild(key,this->registry,this->lua);
+			
+		},
+		sol::meta_function::new_index,
+	
+		[this](LuaEntity& entity, const std::string& key, sol::object value) 
+		{
+			
+			auto registry = this->registry;
+			if (entity.entity == entt::null ||
+				!registry->valid(entity.entity))
 			{
-				return sol::make_object(lua, children[0]);
+				return;
 			}
 
-			return sol::make_object(lua, sol::nil);
+			if (key == "Parent"){
+
+				if (!value.is<LuaEntity>()) return;
+				LuaEntity newParent = value.as<LuaEntity>();
+
+				auto v = this->registry->try_get<Cle::Components::TreeInfo>(entity.entity);
+				auto othert = this->registry->try_get<Cle::Components::TreeInfo>(newParent.entity);
+
+				if (!v || !othert) return;
+				if (this->registry->valid(othert->getParent()))
+				{
+					v->setParent(entity.entity, newParent.entity, this->registry);
+				}
+		
+			}
+		
+			for (const auto& component : registeredComponents)
+			{
+
+
+				if (component.name != key)
+					continue;
+
+
+				auto storage = registry->storage(component.id);
+
+				if (!storage || !storage->contains(entity.entity))
+					return;
+				setLuaProperty(*this->registry, entity.entity, component.id, key, value);
+				return;
+			}
+
 		}
 	);
+	lua.new_usertype<LuaComponent>(
+		"Component",
 
+		sol::meta_function::index,
+		[this](LuaComponent& component,
+			const std::string& key) -> sol::object
+		{
+			return getLuaProperties(
+				*component.registry,
+				component.entity,
+				component.type,
+				key,
+				lua
+			);
+		},
+		sol::meta_function::new_index,
+		[this](LuaComponent& component,
+			const std::string& key,
+			sol::object value)
+		{
+			setLuaProperty(
+				*component.registry,
+				component.entity,
+				component.type,
+				key,
+				value
+			);
+		}
+	);
 	lua["workspace"] = LuaEntity(world->Scene,registry);
+
+
 	lua["tick"] = []() {
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		};
 
 }
-std::vector<LuaEntity> Cle::ScriptHandler::getchildren(const std::string& name)
-{
-	std::vector<LuaEntity> found;
-	for (const auto& e : registry->view<Cle::Components::Name>())
-	{
-		if (registry->get<Cle::Components::Name>(e).getName() == name) found.push_back({e,registry});
-	}
-	return found;
-}
+
 
 void Cle::ScriptHandler::run()
 {
@@ -85,6 +184,7 @@ void Cle::ScriptHandler::run()
 
 		try
 		{
+			lua["script"] = LuaEntity(e, registry);
 			lua.script_file(script.path);
 		}
 		catch (std::exception e)

@@ -19,7 +19,13 @@ namespace Cle
 	{
 		entt::entity entity;
 		entt::registry* registry;
-		
+
+	};
+	struct LuaComponent
+	{
+		entt::entity entity;
+		entt::id_type type;
+		entt::registry* registry;
 	};
 	class ScriptHandler
 	{

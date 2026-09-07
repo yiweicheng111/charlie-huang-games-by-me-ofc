@@ -6,6 +6,7 @@
 #include "IRenderer.h"
 #include "shared.h"
 #include "Scripting/Scripting.h"
+#include "Reflection.h"
 namespace Cle {
 	class World {
 	public:
@@ -26,6 +27,7 @@ namespace Cle {
 
 			Cle::ScriptHandler::getInstance().setVariables(this, registry);
 
+			Cle::RegisterReflection();
 
 		}
 		entt::entity CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMesh);

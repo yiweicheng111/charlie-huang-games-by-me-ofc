@@ -53,7 +53,7 @@ namespace Cle
 			auto& meshPtr = meshCache[{path, index}];
 			std::cout << "ptr used " << meshPtr.use_count() << std::endl;
 			auto& vec = modelCache[path];
-		    vec.erase(std::remove(vec.begin(), vec.end(), gmeshp), vec.end());
+		   // vec.erase(std::remove(vec.begin(), vec.end(), gmeshp), vec.end());
 			if (meshPtr.use_count() > 3){
 				std::cout << "still some instances cant delete yet\n";
 				return false;  
