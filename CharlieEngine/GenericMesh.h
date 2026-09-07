@@ -137,4 +137,9 @@ namespace Cle
             ar(ModelPath, loadedMeshIndex);
         }
     };
+    struct MeshComponent
+    {
+        Cle::GenericMesh* mesh = nullptr;
+        MeshComponent(Cle::GenericMesh* m) : mesh(m) {}
+    };
 }

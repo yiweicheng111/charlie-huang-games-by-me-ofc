@@ -11,9 +11,13 @@ namespace Cle
 	struct Script
 	{
 		std::string path;
+		sol::thread thread;
 		Script(const std::string& p) : path(p) {}
 		bool enabled = true;
 		bool ran = false;
+		sol::coroutine cor;
+		double resumeTime = 0;
+		bool started = false;
 	};
 	struct LuaEntity
 	{
@@ -40,7 +44,7 @@ namespace Cle
 		ScriptHandler& operator=(ScriptHandler&&) = delete;
 
 		std::vector<LuaEntity> getchildren(const std::string& name);
-		void run();
+		void run(double currentTime, double dt);
 
 		static ScriptHandler& getInstance()
 		{

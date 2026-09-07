@@ -30,6 +30,9 @@ namespace Cle
     extern std::vector< typeInfo> registeredComponents;
     extern std::unordered_map< entt::id_type, std::string> propertyNames;
     void RegisterReflection();
+    sol::object MetaToLua(
+        entt::meta_any value,
+        sol::state_view lua);
     void setLuaProperty(
         entt::registry& registry,
         entt::entity entity,

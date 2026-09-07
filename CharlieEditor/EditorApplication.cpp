@@ -197,10 +197,10 @@ void Cle::Editor::EditorApplication::Run()
 		AudioPass();
 		Render();
 
-		Update(0.1f);
+		Update(0.01f);
 		renderer->clearFrame(window);
 		m_network->poll();
-		ScriptHandler::getInstance().run();
+		ScriptHandler::getInstance().run(glfwGetTime(),0.01f);
 
 	}
 }

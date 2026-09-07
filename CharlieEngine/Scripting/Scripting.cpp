@@ -18,8 +18,15 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 {
 	this->world = world;
 	this->registry = registry;
-	lua.open_libraries(sol::lib::base,sol::lib::coroutine);
+	lua.open_libraries(sol::lib::base,sol::lib::coroutine,sol::lib::math);
 
+	lua.new_usertype<glm::vec4>("Vector4",
+		sol::constructors<glm::vec4(), glm::vec4(float, float, float,float)>(),
+		"x", &glm::vec4::x,
+		"y", &glm::vec4::y,
+		"z", &glm::vec4::z,
+		"w", &glm::vec4::w
+	);
 
 
 	lua.new_usertype<glm::vec3>("Vector3",
@@ -31,6 +38,13 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 
 	lua.new_usertype<LuaEntity>(
 		"Entity",
+		"Destroy",
+		[this](LuaEntity& entity) {
+			if (this->registry->valid(entity.entity))
+			{
+				this->registry->destroy(entity.entity);
+			}
+		},
 		"GetChildren", [this](LuaEntity& entity) {
 			auto v = this->registry->try_get<Cle::Components::TreeInfo>(entity.entity);
 			std::vector< LuaEntity> lv;
@@ -74,7 +88,21 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 
 				if (!storage || !storage->contains(entity.entity))
 					return sol::make_object(lua, sol::nil);
-
+				auto meta = entt::resolve(component.id);
+				if (!meta) return sol::make_object(lua, sol::nil);
+				int propcount = 0;
+				entt::id_type onlypropid;
+				for (auto&& [propId, propData] : meta.data())
+				{
+					propcount++;
+					onlypropid = propId;
+				}
+				if (propcount == 1)
+				{
+					entt::meta_any instance = meta.from_void(storage->value(entity.entity));
+					entt::meta_any value = meta.data(onlypropid).get(instance);
+					return Cle::MetaToLua(value, lua);
+				}
 				return sol::make_object(
 					lua,
 					LuaComponent{
@@ -128,6 +156,20 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 
 				if (!storage || !storage->contains(entity.entity))
 					return;
+				auto meta = entt::resolve(component.id);
+				if (!meta) return;
+				int propcount = 0;
+				entt::id_type onlypropid;
+				for (auto&& [propId, propData] : meta.data())
+				{
+					propcount++;
+					onlypropid = propId;
+				}
+				if (propcount == 1)
+				{
+				
+					return 	setLuaProperty(*this->registry, entity.entity, component.id, propertyNames[onlypropid], value);
+				}
 				setLuaProperty(*this->registry, entity.entity, component.id, key, value);
 				return;
 			}
@@ -169,11 +211,12 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 	lua["tick"] = []() {
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		};
-
+	
 }
 
 
-void Cle::ScriptHandler::run()
+void Cle::ScriptHandler::run(double currentTime, double dt)
+
 {
 
 	for (auto& e : registry->view<Script>())
@@ -184,15 +227,39 @@ void Cle::ScriptHandler::run()
 
 		try
 		{
-			lua["script"] = LuaEntity(e, registry);
-			lua.script_file(script.path);
+			if (!script.started)
+			{
+				script.thread  = sol::thread::create(lua.lua_state());
+				sol::state_view state = script.thread.state();
+				state["script"] = LuaEntity(e, registry);
+
+				sol::load_result result = state.load_file(script.path);
+				if (!result.valid())
+				{
+					script.ran = true;
+					continue;
+				}
+
+				script.cor = result;
+				script.started = true;
+				script.resumeTime = 0;
+			}
 		}
 		catch (std::exception e)
 		{
 			std::cout << e.what() << std::endl;
 			continue;
 		}
-		script.ran = true;
+		if (currentTime < script.resumeTime) continue;
+		auto result = script.cor();
+		if (script.cor.status() == sol::call_status::yielded)
+		{
+			script.resumeTime = currentTime + result.get<float>();
+		}
+		else {
+			script.ran = true;
+
+		}
 		
 
 	}

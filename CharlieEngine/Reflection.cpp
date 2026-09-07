@@ -66,33 +66,44 @@ namespace Cle
         registerComponent<Cle::Components::Color>("Color");
         registerName("Color");
 
+
+        entt::meta_factory<Cle::GenericMesh>{}
+        .data<&Cle::GenericMesh::setModelPath,&Cle::GenericMesh::getModelPath>("Path"_hs)
+        .data<&Cle::GenericMesh::setMeshIndex, &Cle::GenericMesh::getMeshIndex>("Index"_hs);
+
+        registerComponent<Cle::GenericMesh>("Mesh");
+
+        registerName("Index");
+        registerName("Path");
+
+
         entt::meta_factory<Cle::Components::Name>{}
-        .data<&Cle::Components::Name::setName, &Cle::Components::Name::getName>("name"_hs);
-        registerComponent<Cle::Components::Name>("name");
-        registerName("name");
+        .data<&Cle::Components::Name::setName, &Cle::Components::Name::getName>("Name"_hs);
+        registerComponent<Cle::Components::Name>("Name");
+        registerName("Name");
 
         entt::meta_factory<Cle::Components::Transform>{}
-        .data<&Cle::Components::Transform::setPosition, &Cle::Components::Transform::getPosition>("position"_hs)
-            .data<&Cle::Components::Transform::setOrientation, &Cle::Components::Transform::getOrientation>("orientation"_hs)
-            .data<&Cle::Components::Transform::setScale, &Cle::Components::Transform::getScale>("scale"_hs);
-        registerComponent<Cle::Components::Transform>("transform");
-        registerName("position");
-        registerName("orientation");
-        registerName("scale");
+        .data<&Cle::Components::Transform::setPosition, &Cle::Components::Transform::getPosition>("Position"_hs)
+            .data<&Cle::Components::Transform::setOrientation, &Cle::Components::Transform::getOrientation>("Orientation"_hs)
+            .data<&Cle::Components::Transform::setScale, &Cle::Components::Transform::getScale>("Scale"_hs);
+        registerComponent<Cle::Components::Transform>("Transform");
+        registerName("Position");
+        registerName("Orientation");
+        registerName("Scale");
 
         entt::meta_factory<Cle::Audio::Sound>{}
-        .data<&Cle::Audio::Sound::setPath, &Cle::Audio::Sound::getPath>("path"_hs)
-        .data<&Cle::Audio::Sound::volume>("volume"_hs)
-        .data<&Cle::Audio::Sound::setPlaying,&Cle::Audio::Sound::isPlaying>("playing"_hs)
-        .data<&Cle::Audio::Sound::setTimePosition,&Cle::Audio::Sound::getTimePosition>("path"_hs)
-        .data<&Cle::Audio::Sound::global>("global"_hs);
-        registerComponent<Cle::Audio::Sound>("sound");
+        .data<&Cle::Audio::Sound::setPath, &Cle::Audio::Sound::getPath>("Path"_hs)
+        .data<&Cle::Audio::Sound::volume>("Volume"_hs)
+        .data<&Cle::Audio::Sound::setPlaying,&Cle::Audio::Sound::isPlaying>("Playing"_hs)
+            .data<&Cle::Audio::Sound::setTimePosition, &Cle::Audio::Sound::getTimePosition>("Position"_hs)
+        .data<&Cle::Audio::Sound::global>("Global"_hs);
+        registerComponent<Cle::Audio::Sound>("Sound");
 
-        registerName("path");
-        registerName("volume");
-        registerName("playing");
-        registerName("position");
-        registerName("global");
+        registerName("Path");
+        registerName("Volume");
+        registerName("Playing");
+        registerName("Position");
+        registerName("Global");
         std::cout << "size " << Cle::registeredComponents.size() << std::endl;
 
     }
