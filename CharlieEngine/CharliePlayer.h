@@ -1,3 +1,4 @@
+/*
 #pragma once
 #include "Application.h"
 #include "IRenderer.h"
@@ -23,3 +24,4 @@ namespace Cle
 		bool running = true;
 	};
 }
+*/

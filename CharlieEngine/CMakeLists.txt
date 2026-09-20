@@ -18,6 +18,8 @@ file(GLOB_RECURSE EngineFiles
     "${CMAKE_CURRENT_SOURCE_DIR}/gameIO.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/AssetHandler.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/AssetHandler.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Reflection.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Transform.cpp"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/ObjectController.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/CameraController.h"

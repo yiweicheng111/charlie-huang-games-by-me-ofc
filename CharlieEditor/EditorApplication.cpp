@@ -8,16 +8,16 @@ using namespace Cle::Gfx;
 using namespace Cle::Components;
 void Cle::Editor::EditorApplication::updateAABBS() {
 	auto frustum = Frustum::createFrustumInCamera(*m_camera);
-	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
-		if (registry.all_of<Transform,Bounds,std::shared_ptr<GenericMesh>>(ent)) {
+	for (auto ent : registry.view<GenericMesh>()) {
+		if (registry.all_of<Transform,Bounds,GenericMesh>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
+			auto& m = registry.get<GenericMesh>(ent);
 			glm::mat4 model = t.model;
 			auto& aabb = registry.get<Bounds>(ent).aabb;
 		
 	
 			if (aabb.dirty) {
-				aabb = m->geometry->m_local_AABB;
+				aabb = m.geometry->m_local_AABB;
 				aabb.max *= t.getScale();
 				aabb.min *= t.getScale();
 				aabb.Translate(t.getPosition());
@@ -29,23 +29,23 @@ void Cle::Editor::EditorApplication::updateAABBS() {
 
 void Cle::Editor::EditorApplication::updateBoundingSpheres() {
 	auto frustum = Frustum::createFrustumInCamera(*m_camera);
-	for (auto ent : registry.view<std::shared_ptr<GenericMesh>>()) {
-		if (registry.all_of<Transform, Bounds, std::shared_ptr<GenericMesh>>(ent)) {
+	for (auto ent : registry.view<GenericMesh>()) {
+		if (registry.all_of<Transform, Bounds, GenericMesh>(ent)) {
 			Transform& t = registry.get<Transform>(ent);
-			auto& m = registry.get<std::shared_ptr<GenericMesh>>(ent);
+			auto& m = registry.get<GenericMesh>(ent);
 			auto& sphere = registry.get<Bounds>(ent).sphere;
 			glm::mat4 model = t.model;
 			
 			/*if (sphere.dirty)
 			{
-				sphere.updateToWorld(m->getVertices(), model);
+				sphere.updateToWorld(m.getVertices(), model);
 				sphere.dirty = false;
 			}*/
 			
 			//std::cout << t.getPosition().x << " " << t.getPosition().y << " " << t.getPosition().z;
 		
 			//std::cout << "\n";
-			sphere.updateToWorld(m->getVertices(), model);
+			sphere.updateToWorld(m.getVertices(), model);
 			//std::cout << "sphere at " << sphere.center.x << " " << sphere.center.y << " "<<sphere.center.z << std::endl;
 			sphere.dirty = false;
 		}
@@ -65,6 +65,8 @@ Cle::Editor::EditorApplication::EditorApplication()
 	renderer = Renderer::IRenderer::Create(&registry);
 
 	window = glfwCreateWindow(800, 800, "CHARLIE ZI", NULL, NULL);
+	registry.ctx().emplace<GLFWwindow*>(window);
+
 	assert(window != NULL);
 	glfwMakeContextCurrent(window);
 	gladLoadGL();
@@ -73,16 +75,20 @@ Cle::Editor::EditorApplication::EditorApplication()
 			glViewport(0, 0, width, height);
 		});
 	renderer->setSettings();
-	World = std::make_unique<Cle::World>(&registry, *renderer);
+	World = std::make_unique<Cle::World>(&registry);
 
-	//m_ScriptHandler = Cle::Scripting::ScriptHandler::getInstance();
 	registry.ctx().emplace<Camera>(Camera());
 	m_camera = &registry.ctx().get<Camera>();
-	Network::setRegistry(&registry);
+	Cle::ScriptHandler::getInstance().openLibraries();
+	Network::setVariables(&registry,World.get());
 	m_network = &Network::getInstance();
 	m_network->onSceneLoaded = [this]()
 		{
+
 			renderer->onSceneLoaded();
+			World->onSceneLoaded();
+			Cle::ScriptHandler::getInstance().setVariables(this->World.get(), &this->registry);
+			
 		};
 
 /*
@@ -92,7 +98,7 @@ Cle::Editor::EditorApplication::EditorApplication()
 	//m_Controller = Cle::CharController(m_camera, window);
 	m_Controller = std::make_unique<Cle::Editor::FreeCameraControl>(m_camera, window);
 
-	m_UIHandler = Cle::Editor::EditorUI(World.get(), window);
+	m_UIHandler = Cle::Editor::EditorUI(World.get(), window,renderer);
 	/*	World->deleteObjectCallback = [&]()
 		{
 			m_UIHandler.m_Focused_Entity = entt::null;
@@ -125,6 +131,8 @@ void Cle::Editor::EditorApplication::runHotKey()
 		Cle::gameIO::getInstance().setRegistry(&registry);
 		//Cle::gameIO::getInstance().setRenderer(renderer.get());
 		Cle::gameIO::getInstance().LoadFile("world.bin");
+		//std::cout << "loaded\n";
+
 		renderer->onSceneLoaded();
 	}
 	mapLoading = false;
@@ -163,7 +171,7 @@ void Cle::Editor::EditorApplication::runPointer()
 	ray.SetFromPointer(m_UIHandler.mousePosRelativeToGame.x, m_UIHandler.mousePosRelativeToGame.y, m_camera->width, m_camera->height, *m_camera);
 	float nearestD = (std::numeric_limits<float>::max)();
 	entt::entity nearestEnt = entt::null;
-	for (auto& ent : registry.view<std::shared_ptr<GenericMesh>>()) {
+	for (auto& ent : registry.view<GenericMesh>()) {
 		if (!registry.any_of<Components::Bounds>(ent)) continue;
 		auto& aabb = registry.get<Components::Bounds>(ent).aabb;
 		float distance = aabb.intersects(ray);
@@ -182,7 +190,12 @@ void Cle::Editor::EditorApplication::Run()
 	while (!glfwWindowShouldClose(window))
 	{
 		if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
-		
+			for (const auto& e : registry.view<Cle::Components::Name>())
+
+			{
+				auto& Name = registry.get<Cle::Components::Name>(e);
+				std::cout << "name " << Name.getName() << std::endl;
+			}
 		}
 		bool key0 = false;
 		key0 = glfwGetKey(window, GLFW_KEY_0)==GLFW_PRESS;
@@ -194,9 +207,9 @@ void Cle::Editor::EditorApplication::Run()
 		{
 			Physics1::resume(registry);
 		}*/
-		AudioPass();
+		AudioPass();	
+		//std::cout << "Drawing\n";
 		Render();
-
 		Update(0.01f);
 		renderer->clearFrame(window);
 		m_network->poll();
@@ -205,8 +218,8 @@ void Cle::Editor::EditorApplication::Run()
 	}
 }
 void Cle::Editor::EditorApplication::AudioPass() {
-	for (auto e : registry.view<std::shared_ptr<Cle::Audio::Sound>>()) {
-		auto& sound = registry.get<std::shared_ptr<Cle::Audio::Sound>>(e);
+	for (auto e : registry.view<std::unique_ptr<Cle::Audio::Sound>>()) {
+		auto& sound = registry.get<std::unique_ptr<Cle::Audio::Sound>>(e);
 		if (registry.any_of<Cle::Components::Transform>(e) && !sound->global) {
 			glm::vec3 position = registry.get<Cle::Components::Transform>(e).getPosition();
 
@@ -218,18 +231,24 @@ void Cle::Editor::EditorApplication::AudioPass() {
 }
 void Cle::Editor::EditorApplication::Render()
 {
+
 	renderer->drawRegistry(*m_camera, window);
 }
 void Cle::Editor::EditorApplication::Update(float dt) {
 	//Physics1::update(registry);
 	if (!m_UIHandler.pointerBusy) m_Controller->Poll();
+//	std::cout << "m_UIHandler\n";
 
 	m_UIHandler.Update();
+//	std::cout << "updateAABBS\n";
 
 	updateAABBS();
 
 	updateBoundingSpheres();
+//	std::cout << "runHotKey\n";
 
 	runHotKey();
+
 	runPointer();
+
 }

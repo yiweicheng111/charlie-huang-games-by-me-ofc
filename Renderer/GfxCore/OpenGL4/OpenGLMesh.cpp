@@ -15,7 +15,7 @@ void Cle::OPENGL::Mesh::draw()
 	else {
 		glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
 	}
-	
+
 }
 
 void Cle::OPENGL::Mesh::draw(unsigned int nebo, unsigned int count)

@@ -13,7 +13,7 @@
 #include<iostream>
 #include "World.h"
 #include "GLFW/glfw3.h"
-
+#include "IRenderer.h"
 namespace Cle::Editor
 {
 	class EditorUI
@@ -26,9 +26,9 @@ namespace Cle::Editor
 		entt::entity m_Focused_Entity = entt::null;
 		GLFWwindow* m_window;
 		Cle::World* World;
-
+		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
 		
-		EditorUI(Cle::World* World, GLFWwindow* m_window);
+		EditorUI(Cle::World* World, GLFWwindow* m_window, std::shared_ptr<Cle::Renderer::IRenderer> r);
 		EditorUI() {};
 
 		glm::vec2 mousePosRelativeToGame;

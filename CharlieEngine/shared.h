@@ -24,7 +24,29 @@
 
 namespace Cle::Components
 {
+	struct SystemType
+	{
+		enum Type
+		{
+			Scene,
+			Server,
+			Replication,
+			Client,
+			None,
 
+		};
+		Type type;
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(type);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(type);
+		}
+	};
 	struct PhysicsComponent
 	{
 		static reactphysics3d::Vector3 glmtorp3dvec3(const glm::vec3& vec)
@@ -122,6 +144,7 @@ namespace Cle::Components
 		{
 			return parent;
 		}
+	
 		void setParent(entt::entity you, entt::entity other, entt::registry* registry)
 		{
 			if (!registry->any_of<TreeInfo>(other)) {
@@ -153,16 +176,14 @@ namespace Cle::Components
 		}
 		void removeChild(entt::entity other, entt::registry* registry)
 		{
-			auto& childtree = registry->get<TreeInfo>(other);
+			
 			auto it = std::find(Children.begin(), Children.end(), other);
 			if (it == Children.end()) return;
 			Children.erase(it);
-			if (registry->valid(other) and registry->any_of<TreeInfo>(other))
+			if (registry->valid(other) && registry->any_of<TreeInfo>(other))
 			{
-				
-				childtree.parent = entt::null;
+				registry->get<TreeInfo>(other).parent = entt::null;
 			}
-			
 			
 		}
 		template <class Archive>
@@ -279,18 +300,19 @@ namespace Cle
 			ar(vk,forward,right);
 		}
 	};
-	enum NetworkMessage : int
+	enum class NetworkMessage : int
 	{
 		OnJoin,
 		UpdateEntity,
 		Input,
 		MovementKey,
 		UpdateCamera,
+		Event,
 	};
 
 	struct Header
 	{
-		int msg;
+		NetworkMessage msg;
 		template <class Archive>
 		void save(Archive& ar) const
 		{
@@ -322,6 +344,7 @@ namespace Cle
 
 		}
 	};
+	
 	struct TreeInfoPacket
 	{
 		int parentNetID{};
@@ -348,17 +371,21 @@ namespace Cle
 		std::optional <MeshPacket> mesh;
 		std::optional <Cle::Components::Transform> transform;
 		std::optional <TreeInfoPacket> treeinfo;
+		std::optional < Cle::Components::Name > name;
+		std::optional <std::string> script;
+
+		Cle::Components::SystemType::Type systemType;
 		template <class Archieve>
 		void save(Archieve& ar) const
 		{
-			ar(netID,color,mesh,transform,treeinfo);
+			ar(netID,color,mesh,transform,treeinfo, systemType,name, script);
 
 		}
 		template <class Archieve>
 
 		void load(Archieve& ar)
 		{
-			ar(netID, color, mesh, transform, treeinfo);
+			ar(netID, color, mesh, transform, treeinfo, systemType,name, script);
 
 		}
 	};

@@ -3,6 +3,10 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <string>
+static auto endcallback = [](void* pUserData, ma_sound* pSound) {
+	auto pl = static_cast<bool*>(pUserData);
+	*pl = false;
+	};
 namespace Cle::Audio {
 	
 	class Sound
@@ -10,8 +14,13 @@ namespace Cle::Audio {
 	private:
 		bool playing = false;
 		std::string path;
+		bool destroyed = true;
 		
 	public:
+		Sound(const Sound&) = delete;
+		Sound& operator=(const Sound&) = delete;
+		Sound(Sound&&) = delete;
+		Sound& operator=(Sound&&) = delete;
 		float volume = 1;
 		bool isPlaying() const
 		{
@@ -25,8 +34,21 @@ namespace Cle::Audio {
 		bool global = false;
 		ma_engine* engine;
 		glm::vec3 position = glm::vec3(0.0f);
-		~Sound()
+
+
+
+
+		std::unique_ptr<Sound> Clone() const
 		{
+			auto copy = std::make_unique<Sound>(path, engine, global);
+			copy->volume = volume;
+			copy->position = position;
+			return copy;
+		}
+		~Sound() noexcept
+		{
+			if (destroyed || !engine) return;
+			destroyed = true;
 			ma_sound_uninit(&sound);
 		}
 		explicit Sound(std::string path, ma_engine* engine) : path(path), engine(engine) {
@@ -36,7 +58,7 @@ namespace Cle::Audio {
 				auto pl = static_cast<bool*>(pUserData);
 				*pl = false;
 				}, &playing);
-
+			destroyed = false;
 		}
 		explicit Sound(std::string path, ma_engine* engine,bool globa) : path(path), engine(engine), global(globa) {
 			ma_sound_init_from_file(engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_STREAM, nullptr, nullptr, &sound);
@@ -45,6 +67,7 @@ namespace Cle::Audio {
 				auto pl = static_cast<bool*>(pUserData);
 				*pl = false;
 				}, &playing);
+			destroyed = false;
 
 		}
 		 void setPath(std::string newPath)

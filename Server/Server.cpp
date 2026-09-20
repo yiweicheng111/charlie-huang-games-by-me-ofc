@@ -6,6 +6,7 @@
 #include <fstream>
 #include <reactphysics3d/body/RigidBody.h>
 #include "time.h"
+#include "CharlieEngine/Scripting/Event.h"
 using namespace Cle;
 static double accumulator = 0.0;
 static double dt = 1.0 / 60.0;
@@ -22,7 +23,11 @@ Cle::Server::Server(int port)
 	registry.on_update<std::shared_ptr<Cle::GenericMesh>>().connect<&Cle::Server::updateMesh>(*this);
 	physicsWorld = physicsCommon.createPhysicsWorld();
 	physicsWorld->setGravity(reactphysics3d::Vector3(0, -180.0f, 0));
-	
+	world = World(&registry);
+	Cle::ScriptHandler::getInstance().openLibraries();
+	Cle::gameIO::getInstance().onLoaded = [this]() {
+		Cle::ScriptHandler::getInstance().setVariables(&this->world, &this->registry);
+		};
 }
 void Cle::Server::updateTransform(entt::registry& registry, entt::entity entity)
 {
@@ -96,6 +101,7 @@ void Cle::Server::run()
 	ENetEvent event;
 	while (running)
 	{
+
 		auto lastTime = std::chrono::steady_clock::now();
 		
 
@@ -104,6 +110,7 @@ void Cle::Server::run()
 			auto now = std::chrono::steady_clock::now();
 			accumulator += std::chrono::duration<double>(now - lastTime).count();
 			lastTime = now;
+			ScriptHandler::getInstance().run(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(),0.1);
 			while (enet_host_service(host, &event, 1) > 0)
 			{
 				if (event.type == ENET_EVENT_TYPE_CONNECT) onJoin(event.peer);
@@ -118,8 +125,18 @@ void Cle::Server::run()
 
 					Cle::Header header;
 					ar(header);
-				
-					
+					Cle::EventPacket packet;						
+
+					if (header.msg == Cle::NetworkMessage::Event)
+					{
+						ar(packet);
+						entt::entity entity = static_cast<entt::entity>(packet.networkID);
+
+						auto& holder = registry.get_or_emplace<Cle::EventHolder>(entity, entity, &registry);
+						auto& evt = holder.getOrMakeEvent(packet.name);
+						sol::table args = LuaTableToSolTable(ScriptHandler::getInstance().lua, packet.data);
+						evt.FireArgs(args);
+					}
 				}
 			}
 
@@ -143,6 +160,13 @@ void Cle::Server::onJoin(ENetPeer* peer)
 		int ents = 0;
 		for (auto ent : registry.view<entt::entity>())
 		{
+			if (registry.any_of<Cle::Components::SystemType>(ent))
+			{
+				if (registry.get<Cle::Components::SystemType>(ent).type == Cle::Components::SystemType::Server)
+				{
+					continue;
+				}
+			}
 			ents++;
 			EntityPacket entityp;
 			if (!registry.any_of<networkID>(ent))
@@ -154,22 +178,35 @@ void Cle::Server::onJoin(ENetPeer* peer)
 			{
 				entityp.transform = registry.get<Cle::Components::Transform>(ent);
 			}
-
+			if (registry.any_of<Cle::Components::Name>(ent))
+			{
+				entityp.name = registry.get<Cle::Components::Name>(ent);
+			}
 			if (registry.any_of<Cle::Components::Color>(ent))
 			{
 				entityp.color = registry.get<Cle::Components::Color>(ent);
 			}
-			if (registry.any_of<std::shared_ptr<GenericMesh>>(ent))
+			if (registry.any_of<GenericMesh>(ent))
 			{
-				auto& gmesh = registry.get<std::shared_ptr<GenericMesh>>(ent);
-				entityp.mesh = MeshPacket({ gmesh->getModelPath(),gmesh->getMeshIndex() });
+				auto& gmesh = registry.get<GenericMesh>(ent);
+				entityp.mesh = MeshPacket({ gmesh.getModelPath(),gmesh.getMeshIndex() });
+			}
+			if (registry.any_of<Cle::Script>(ent))
+			{
+				auto& s = registry.get<Script>(ent);
+				entityp.script = s.path;
 			}
 			if (registry.any_of<Components::TreeInfo>(ent))
 			{
 				auto parent = registry.get<Components::TreeInfo>(ent).getParent();
-				if (registry.valid(parent))
+				if (!registry.any_of<networkID>(parent))
+				{
+					registry.emplace<networkID>(parent, (int)parent);
+				}
+				if (registry.valid(parent) && registry.any_of<networkID>(parent))
 				{
 					auto parentid = registry.get<networkID>(parent).value;
+					
 					entityp.treeinfo = TreeInfoPacket(parentid);
 				}
 				else
@@ -177,6 +214,10 @@ void Cle::Server::onJoin(ENetPeer* peer)
 					entityp.treeinfo = TreeInfoPacket(-1);
 				}
 
+			}
+			if (registry.any_of<Cle::Components::SystemType>(ent))
+			{
+				entityp.systemType = registry.get<Cle::Components::SystemType>(ent).type;
 			}
 			packets.push_back(entityp);
 
@@ -193,13 +234,26 @@ void Cle::Server::onJoin(ENetPeer* peer)
 int main()
 {
 	Cle::Server s(8080);
+	auto& world = s.world;
 	auto& registry = s.registry;
 	Cle::gameIO::getInstance().LoadFile("D:/charlie-huang-games-by-me-ofc-main/build/world.bin");
+	ScriptHandler::getInstance().setVariables(&world, &registry);
 
 	for (auto e : registry.view<Cle::Components::Name>())
 	{
 		auto& n = registry.get<Cle::Components::Name>(e);
 
+		if (registry.any_of<Cle::Script>(e))
+		{
+
+			if (world.getVisibility(e) == Cle::Components::SystemType::Client)
+			{
+				std::cout << "set\n";
+				
+				registry.get<Cle::Script>(e).enabled = false;
+			}
+		
+		}
 
 		if (registry.any_of<Components::Transform>(e))
 		{
@@ -217,7 +271,7 @@ int main()
 
 
 	}
-
+	std::cout << "done\n";
 	s.run();
 	return 0;
 }

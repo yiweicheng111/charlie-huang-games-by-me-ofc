@@ -1,6 +1,7 @@
 
 #include "Network.h"
 #include "shared.h"
+#include "Scripting/Scripting.h"
 void Cle::Network::connectServer(int port, std::string ip)
 {
     enet_initialize();
@@ -83,47 +84,75 @@ void Cle::Network::poll()
             else if (header.msg == NetworkMessage::OnJoin)
             {
                 ar(packets);
+                std::cout << "before " << registry->storage<entt::entity>().size() << std::endl;
 
                 registry->clear();
                 netIDtoEntity.clear();
+
+              
+                int count = 0;
                 for (auto& p : packets)
                 {
+                    count++;
                     entt::entity e = registry->create();
 
                     registry->emplace<networkID>(e, p.netID);
                     netIDtoEntity[p.netID.value] = e;
+                    if (p.script)
+                    {
+                        registry->emplace_or_replace<Cle::Script>(e, Script(*p.script));
+
+                    }
+                  
+                    if (p.systemType)
+                    {
+                        registry->emplace_or_replace<SystemType>(e, SystemType{p.systemType});
+                        
+                    }
                     if (p.transform)
                         registry->emplace<Transform>(e, *p.transform);
+                    if (p.name)
+                    {
+
+                        registry->emplace_or_replace<Name>(e, *p.name);
+                    }
 
                     if (p.color)
                         registry->emplace<Color>(e, *p.color);
                     if (p.treeinfo)
                     {
-                        auto& tree = registry->emplace<TreeInfo>(e);
+                        auto& tree = registry->get_or_emplace<TreeInfo>(e);
                         tree.loadingParentID = p.treeinfo->parentNetID;
                     }
 
 
                     if (p.mesh)
                     {
-                        auto mesh = std::make_shared<GenericMesh>(
+                        auto mesh = GenericMesh(
                             p.mesh->path,
                             p.mesh->meshIndex
                         );
 
-                        registry->emplace<std::shared_ptr<GenericMesh>>(e, mesh);
+                        registry->emplace<GenericMesh>(e, mesh);
 
                     }
+              
                 }
                 for (auto ent : registry->view<TreeInfo>())
                 {
                     auto& tree = registry->get<TreeInfo>(ent);
                     if (tree.loadingParentID == -1) continue;
                     auto& parent = netIDtoEntity[tree.loadingParentID];
-                        
+                    if (registry->any_of<Name>(parent))
+                    {
+                     //   std::cout << "name " << registry->get<Name>(parent).getName() << std::endl;
+                    }
                     tree.setParent(ent, parent, registry);
                 }
+
                 if (onSceneLoaded) onSceneLoaded();
+             
+                std::cout << "after " << registry->storage<entt::entity>().size() << std::endl;
 
             }
       

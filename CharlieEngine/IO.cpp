@@ -1,5 +1,5 @@
 
-
+#include "Network.h"
 #include "gameIO.h"
 #include <fstream>
 #include "Mesh.h"
@@ -18,17 +18,22 @@ void Cle::gameIO::Snapshot(std::string path)
 		.get<entt::entity>(arch)
 		.get<Cle::Components::TreeInfo>(arch)
 	     .get<Cle::Components::Transform>(arch)
-		.get<std::shared_ptr<GenericMesh>>(arch)
+		.get<GenericMesh>(arch)
+		.get<Script>(arch)
+
 		.get<Cle::MaterialRef>(arch)
 
 		//.get<std::shared_ptr<Cle::Gfx::ITexture>>(arch)
 		.get<Cle::Components::Color>(arch)
+		.get<Cle::Components::SystemType>(arch)
+
 		.get<Cle::Components::Name>(arch);
 
 }
 
 void Cle::gameIO::LoadFile(std::string path)
 {
+
 	if (!registry)
 	{
 		std::cout << "no registry\n";
@@ -43,11 +48,16 @@ void Cle::gameIO::LoadFile(std::string path)
 		.get<entt::entity>(arch)
 		.get<Cle::Components::TreeInfo>(arch)
 		.get<Cle::Components::Transform>(arch)
-		.get<std::shared_ptr<GenericMesh>>(arch)
+		.get<GenericMesh>(arch)
+		.get<Script>(arch)
+
 		.get<Cle::MaterialRef>(arch)
 	//	.get<std::shared_ptr<Cle::Gfx::ITexture>>(arch)
 		.get<Cle::Components::Color>(arch)
-		.get<Cle::Components::Name>(arch).orphans();
+		.get<Cle::Components::SystemType>(arch)
+
+		.get<Cle::Components::Name>(arch).orphans();	
+
 	for (auto ent : registry->view<Cle::Components::TreeInfo>())
 	{
 		auto& treeinfo =registry->get<Cle::Components::TreeInfo>(ent);
@@ -56,6 +66,6 @@ void Cle::gameIO::LoadFile(std::string path)
 			treeinfo.setParent(ent, treeinfo.getParent(), registry);
 		}
 		
-	}
-
+	}		
+	if (onLoaded) onLoaded();
 }

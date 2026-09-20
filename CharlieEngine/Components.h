@@ -7,6 +7,12 @@
 #include "Transform.h"
 #include "LightComponent.h"
 #include "CharlieEngine/Vertex.h"
+namespace Cle
+{
+	namespace Gfx {
+		class ITexture;
+	}
+}
 namespace Cle::Components
 {
 	
@@ -91,7 +97,9 @@ namespace Cle::Components
 	};
 	struct CubeMapTexture
 	{
-		std::vector<std::string> faces = std::vector<std::string>(6,"sky.jpg");
+		std::vector<std::shared_ptr<Cle::Gfx::ITexture>> faces;
+		CubeMapTexture() = default;
+		CubeMapTexture(const std::vector<std::shared_ptr<Cle::Gfx::ITexture>>& f) : faces(f) {}
 	};
 	struct Bounds
 	{

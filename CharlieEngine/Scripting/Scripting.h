@@ -5,6 +5,7 @@
 #include <filesystem>
 #include "lua/lua.h"
 #include "entt/entt.hpp"
+#include <cereal/cereal.hpp>
 namespace Cle
 {
 	class World;
@@ -12,11 +13,23 @@ namespace Cle
 	{
 		std::string path;
 		sol::thread thread;
+		Script() = default;
 		Script(const std::string& p) : path(p) {}
 		bool enabled = true;
 		bool ran = false;
 		sol::coroutine cor;
 		double resumeTime = 0;
+
+		template <class Archive>
+		void save(Archive& ar) const
+		{
+			ar(path, enabled);
+		}
+		template <class Archive>
+		void load(Archive& ar)
+		{
+			ar(path, enabled);
+		}
 		bool started = false;
 	};
 	struct LuaEntity
@@ -34,6 +47,7 @@ namespace Cle
 	class ScriptHandler
 	{
 	public:
+		std::vector<entt::entity> scriptPendingDestroy;
 		sol::state lua;
 		entt::registry* registry;
 		void setVariables(Cle::World* world,entt::registry* registry);
@@ -45,7 +59,7 @@ namespace Cle
 
 		std::vector<LuaEntity> getchildren(const std::string& name);
 		void run(double currentTime, double dt);
-
+		void openLibraries();
 		static ScriptHandler& getInstance()
 		{
 			static ScriptHandler instance;

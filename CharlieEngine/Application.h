@@ -23,7 +23,7 @@ namespace Cle::Core
 		GLFWwindow* window;
 		ma_engine audio_engine;
 		std::unique_ptr<Cle::World> World;
-		std::unique_ptr<Cle::Renderer::IRenderer> renderer;
+		std::shared_ptr<Cle::Renderer::IRenderer> renderer;
 		virtual void Run() = 0;
 		virtual void AudioPass() = 0;
 		virtual void Render() = 0;

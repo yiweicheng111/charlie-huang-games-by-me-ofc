@@ -10,7 +10,6 @@
 #include "Material.h"
 #include "OpenGLMesh.h"
 #include "OpenGL4/LightBuffer.h"
-
 using namespace Cle::OPENGL;
 namespace Cle::OPENGL
 {
@@ -21,7 +20,7 @@ namespace Cle::OPENGL
 		GLuint sceneImage;
 		GLuint sceneRBO;
 		Renderer(entt::registry* registry);
-		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh) override;
+		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(Cle::GenericMesh mesh) override;
 		virtual std::shared_ptr<Cle::Gfx::ITexture> getOrMakeTexture(const std::string& path) override;
 		virtual void drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow* window) override;
 		virtual unsigned int getImage() const
@@ -32,10 +31,11 @@ namespace Cle::OPENGL
 		virtual void beginFrame() override;
 		virtual void clearFrame(GLFWwindow* window) override;
 		virtual void clearColor(float r, float g, float b, float w) override;
-		//virtual void uploadMesh(entt::entity e, std::shared_ptr<Cle::GenericMesh> mesh, entt::registry& registry) override;
+		//virtual void uploadMesh(entt::entity e, Cle::GenericMesh mesh, entt::registry& registry) override;
 		virtual void setSettings() override;
 		virtual void drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera) override;
 		virtual void lightPass() override;
+		virtual std::shared_ptr<Cle::Gfx::ITexture> createCubeMapTexture(Cle::Components::CubeMapTexture& tex) override;
 	//	virtual void UniformCamMatrix(Cle::Gfx::Camera& camera, std::shared_ptr<Cle::IShader> shader) override;
 	//	virtual void lightingPass() override;
 	//	virtual void cleanDirtyMesh(entt::entity entity) override;

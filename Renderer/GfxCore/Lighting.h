@@ -1,8 +1,11 @@
 #pragma once
 #include "glm/glm.hpp"
 #include "CharlieEngine/Components.h"
+#include "ITexture.h"
 namespace Cle
 {
+	
+
 	class Lighting
 	{
 	private:
@@ -13,7 +16,7 @@ namespace Cle
 
 		Lighting(Lighting&&) = delete;
 		Lighting& operator=(Lighting&&) = delete;
-
+		~Lighting() {}
 		static Lighting& getInstance()
 		{
 			static Lighting instance{};
@@ -32,10 +35,10 @@ namespace Cle
 		glm::vec3 backgroundColor = skyBottom;
 
 		Cle::Components::CubeMapTexture skybox;
-		std::shared_ptr<ITexture> skyboxTex;
+		std::shared_ptr<Cle::Gfx::ITexture> skyboxTex;
 		bool usesSkybox = false;
 	private:
 		Lighting() {}
-		~Lighting() {}
+
 	};
 }

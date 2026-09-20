@@ -5,7 +5,8 @@
 #include "CharlieEngine/Transform.h"
 #include <unordered_set>
 #include "reactphysics3d/reactphysics3d.h"
-
+#include "CharlieEngine/Scripting/Scripting.h"
+#include "CharlieEngine/World.h"
 namespace Cle
 {
 	class Server
@@ -19,7 +20,7 @@ namespace Cle
 		std::unordered_set<entt::entity> dirtyMeshes;
 		reactphysics3d::PhysicsCommon physicsCommon;
 		reactphysics3d::PhysicsWorld* physicsWorld;
-
+		Cle::World world;
 		~Server()
 		{
 			enet_host_destroy(host);

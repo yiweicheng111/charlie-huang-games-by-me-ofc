@@ -35,9 +35,9 @@ namespace Cle
 			}
 		};
 		std::unordered_map<std::pair<std::string,int>, std::shared_ptr<MeshGeometry>,pairhash> meshCache;
-		std::unordered_map<std::string, std::vector< std::shared_ptr<GenericMesh>>> modelCache;
+		std::unordered_map<std::string, std::vector< GenericMesh>> modelCache;
 
-		bool UnloadModel(const std::string& path, int index, std::shared_ptr<GenericMesh>& gmeshp)
+		bool UnloadModel(const std::string& path, int index, GenericMesh& gmeshp)
 		{
 			//std::cout << path << index <<std::endl;
 
@@ -51,11 +51,11 @@ namespace Cle
 			}
 
 			auto& meshPtr = meshCache[{path, index}];
-			std::cout << "ptr used " << meshPtr.use_count() << std::endl;
+		//	std::cout << "ptr used " << meshPtr.use_count() << std::endl;
 			auto& vec = modelCache[path];
 		   // vec.erase(std::remove(vec.begin(), vec.end(), gmeshp), vec.end());
 			if (meshPtr.use_count() > 3){
-				std::cout << "still some instances cant delete yet\n";
+				//std::cout << "still some instances cant delete yet\n";
 				return false;  
 			}
 			std::cout << "erased\n";
@@ -64,7 +64,8 @@ namespace Cle
 
 		}
 
-		/*std::shared_ptr<GenericMesh> getOrMakeMesh(const std::string& path, int meshIndex)
+		/*
+		getOrMakeMesh(const std::string& path, int meshIndex)
 		{
 			const auto& meshes = LoadModel(path);
 			if (meshes.empty())
@@ -81,6 +82,6 @@ namespace Cle
 
 		std::vector<GenericMesh> ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 parentTransform,  std::unordered_map<unsigned int, std::shared_ptr<MeshGeometry>>& tempcache);
 		std::shared_ptr<MeshGeometry> ProcessMesh(aiMesh* Mesh, const aiScene* scene);
-		std::vector<std::shared_ptr<GenericMesh>>& LoadModel(std::string path);
+		std::vector<GenericMesh>& LoadModel(std::string path);
 	};
 }

@@ -53,10 +53,12 @@ namespace Cle::OPENGL
 			indexCount = _indexCount;
 		}
 		void draw(unsigned int nebo, unsigned int count);
-		Mesh(std::shared_ptr<Cle::GenericMesh> g_Mesh)
+		Mesh(
+			Cle::GenericMesh
+			g_Mesh)
 		{
-			auto& indices = g_Mesh->getIndices();
-			auto& vertices = g_Mesh->getVertices();
+			auto& indices = g_Mesh.getIndices();
+			auto& vertices = g_Mesh.getVertices();
 			indexCount = indices.size();
 			vertexCount = vertices.size();
 			VBO vbo(vertices);

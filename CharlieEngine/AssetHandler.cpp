@@ -272,7 +272,9 @@ std::shared_ptr<MeshGeometry> AssetHandler::ProcessMesh(
 
 
 
-std::vector<std::shared_ptr<GenericMesh>>&
+std::vector<
+    Cle::GenericMesh
+>&
 AssetHandler::LoadModel(std::string path)
 {
 
@@ -371,13 +373,10 @@ AssetHandler::LoadModel(std::string path)
 
         mesh.setMeshIndex(instanceIndex);
 
-        auto ptr =
-            std::make_shared<GenericMesh>(
-                std::move(mesh)
-            );
+          
 
 
-        entry.push_back(ptr);
+        entry.push_back(mesh);
         instanceIndex++;
     }
 

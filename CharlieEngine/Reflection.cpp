@@ -7,6 +7,8 @@
 #include <entt/meta/template.hpp>
 #include "shared.h"
 #include "Audio/AudioEngine.h"
+#include "Lighting.h"
+#include "Scripting/Event.h"
 using namespace Cle;
 
 template <typename Component>
@@ -34,12 +36,18 @@ namespace Cle
     std::unordered_map< entt::id_type, std::string> propertyNames;
     void Cle::RegisterReflection(entt::registry* registry)
     {
-        registry->on_construct<std::shared_ptr<GenericMesh>>().connect<&registerMeshProxy>();
 
         entt::meta_factory<float>{};
         entt::meta_factory<std::string>{};
         entt::meta_factory<bool>{};
         entt::meta_factory<int>{};
+        entt::meta_factory<unsigned int>{};
+
+        entt::meta_factory<Cle::Lighting>{}
+        .data<&Cle::Lighting::ambient>("ambient"_hs)
+            .data<&Cle::Lighting::sunDirection>("sunDirection"_hs)
+            .data<&Cle::Lighting::fogEnd>("fogEnd"_hs)
+            .data<&Cle::Lighting::fogStart>("fogStart"_hs);
 
         entt::meta_factory<glm::vec3>{}  
             .data<&glm::vec3::x>("x"_hs)
@@ -54,7 +62,7 @@ namespace Cle
         .data<&glm::vec4::x>("x"_hs)
             .data<&glm::vec4::y>("y"_hs)
             .data<&glm::vec4::z>("z"_hs)
-            .data<&glm::vec4::y>("w"_hs)
+            .data<&glm::vec4::w>("w"_hs)
             ;
         registerComponent<glm::vec4>("vec4");
         registerName("x");
@@ -79,14 +87,10 @@ namespace Cle
         registerName("Color");
 
 
-        entt::meta_factory<Cle::MeshMeta>{}
-        .data<&Cle::MeshMeta::setModelPath,&Cle::MeshMeta::getModelPath>("Path"_hs)
-        .data<&Cle::MeshMeta::setMeshIndex, &Cle::MeshMeta::getMeshIndex>("Index"_hs);
+     
 
-        registerComponent<Cle::MeshMeta>("Mesh");
 
-        registerName("Index");
-        registerName("Path");
+
 
 
         entt::meta_factory<Cle::Components::Name>{}
@@ -169,6 +173,8 @@ namespace Cle
 
         if (type == entt::resolve<float>())
             return sol::make_object(lua, value.cast<float>());
+        if (type == entt::resolve<int>())
+            return sol::make_object(lua, value.cast<int>());
 
         if (type == entt::resolve<bool>())
             return sol::make_object(lua, value.cast<bool>());

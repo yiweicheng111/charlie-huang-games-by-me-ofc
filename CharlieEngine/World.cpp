@@ -6,30 +6,32 @@
 #include <cereal/archives/binary.hpp>
 #include "shared.h"
 #include "Audio/AudioEngine.h"
+#include "AssetHandler.h"
 using namespace Cle::Components;
 using namespace Cle::Gfx;
 
 
 
-entt::entity Cle::World::CreateDebugObject(std::shared_ptr<Cle::GenericMesh> GMesh)
+entt::entity Cle::World::CreateDebugObject(Cle::GenericMesh GMesh)
 {
 	entt::entity charlie = registry->create();
 	registry->emplace < Cle::Components::TreeInfo > (charlie);
 	registry->emplace<MaterialRef>(charlie);
 	registry->emplace<Color>(charlie);
+	registry->emplace<Name>(charlie);
 
 	//registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
 
 	registry->emplace<Cle::Components::Transform>(charlie);
 	auto& t = registry->get<Cle::Components::Transform>(charlie);
-	registry->emplace<Cle::Components::Name>(charlie, "charlie");
+	//registry->emplace<Cle::Components::Name>(charlie, "charlie");
 
-	renderer.uploadMesh(charlie, GMesh, *registry);
+	registry->emplace<Cle::GenericMesh>(charlie, GMesh);
 
-	auto& m = registry->get<std::shared_ptr<GenericMesh>>(charlie);
-	t.setPosition(m->positionOffset);
-	t.setScale(m->scaleOffset);
-	t.setOrientation(m->orientationOffset);
+	auto& m = registry->get<GenericMesh>(charlie);
+	t.setPosition(m.positionOffset);
+	t.setScale(m.scaleOffset);
+	t.setOrientation(m.orientationOffset);
 	registry->get < Cle::Components::TreeInfo >(charlie).setParent(charlie, Scene,registry);
 
 	return charlie;
@@ -46,7 +48,7 @@ entt::entity Cle::World::CreateDebugObject()
 	registry->emplace<Cle::Components::Name>(charlie, "charlie");
 
 
-	registry->get < Cle::Components::TreeInfo >(charlie).setParent(charlie, Scene, registry);
+		registry->get < Cle::Components::TreeInfo >(charlie).setParent(charlie, Scene, registry);
 
 	return charlie;
 
@@ -67,16 +69,20 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 	if (registry->any_of<MaterialRef>(existing)) {
 		registry->emplace<MaterialRef>(newent, registry->get<MaterialRef>(existing));
 	}
-	if (registry->any_of<std::shared_ptr<GenericMesh>>(existing)) {
-		renderer.uploadMesh(newent, registry->get<std::shared_ptr<GenericMesh>>(existing), *registry);
+	if (registry->any_of<GenericMesh>(existing)) {
+		auto original = registry->get<GenericMesh>(existing);
+		original.uploaded = false;
+
+		registry->emplace<GenericMesh>(newent, original);
 	}
 	if (registry->any_of<TreeInfo>(existing)) {
-		registry->emplace<TreeInfo>(newent, registry->get<TreeInfo>(existing));
+		auto& newTree = registry->emplace<TreeInfo>(newent);
+		auto parent = registry->get<TreeInfo>(existing).getParent();
+		newTree.setParent(newent, registry->valid(parent) ? parent : Scene, registry);
 	}
-
-	if (registry->any_of< std::shared_ptr<Cle::Audio::Sound>>(existing)) {
-		auto& audio = registry->get< std::shared_ptr<Cle::Audio::Sound>>(existing);
-		registry->emplace<std::shared_ptr<Cle::Audio::Sound>>(newent, std::make_shared<Cle::Audio::Sound>(*audio));
+	if (registry->any_of< std::unique_ptr<Cle::Audio::Sound>>(existing)) {
+		auto& audio = registry->get< std::unique_ptr<Cle::Audio::Sound>>(existing);
+		registry->emplace<std::unique_ptr<Cle::Audio::Sound>>(newent,audio->Clone());
 	}
 
 	return newent;
@@ -84,25 +90,87 @@ entt::entity Cle::World::CopyObject(entt::entity existing)
 
 std::vector<entt::entity> Cle::World::addModelToScene(const std::string& path)
 {
-	std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(path);
+	auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(path);
 	std::vector<entt::entity> entts;
 
-
+	//auto tex = renderer.getOrMakeTexture("c.jpg");
 	for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
 
 		auto e = CreateDebugObject(I);
 		entts.push_back(e);
-		registry->get<Cle::Components::Color>(e).value = glm::vec4(I->assimpRequestedColor, 1);
+		registry->get<Cle::Components::Color>(e).value = glm::vec4(I.assimpRequestedColor, 1);
+	//	registry->emplace<Cle::Components::CubeMapTexture>(e, CubeMapTexture({ tex,tex,tex,tex,tex,tex }));
 
 	}
 	return entts;
+}
+void Cle::World::onSceneLoaded()
+{
+
+
+	for (auto e : registry->view<SystemType>())
+	{
+		const auto& t = registry->get<SystemType>(e);
+		if (t.type == SystemType::Server)
+			Server = e;
+
+		if (t.type == SystemType::Client)
+			Client = e;
+
+		if (t.type == SystemType::Replication)
+		{
+			std::cout << "added replication\n";
+			Replicated = e;
+
+		}
+
+		if (t.type == SystemType::Scene)
+			Scene = e;
+	}
+}
+entt::entity Cle::World::getTopParent(entt::entity e)
+{
+	if (!registry->any_of<TreeInfo>(e)) return e;
+	entt::entity current = e;
+	entt::entity parent = registry->get<TreeInfo>(e).getParent();
+	while (parent != entt::null || registry->valid(parent))
+	{
+		current = parent;
+		if (!registry->any_of<TreeInfo>(current))
+		{
+			break;
+		}
+		if (parent == entt::null || !registry->valid(parent))
+			break;
+		parent = registry->get<TreeInfo>(current).getParent();
+	}
+	return current;
+}
+int Cle::World::getVisibility(entt::entity e)
+{
+	auto top = getTopParent(e);
+	auto systemType = registry->get_or_emplace<Cle::Components::SystemType>(top);
+	if (systemType.type == Cle::Components::SystemType::Replication)
+	{
+		return Cle::Components::SystemType::Replication;
+	}
+	if (systemType.type == Cle::Components::SystemType::Server)
+	{
+		return Cle::Components::SystemType::Server;
+	}
+	if (systemType.type == Cle::Components::SystemType::Client)
+	{
+		return Cle::Components::SystemType::Client;
+	}
+
+	return Cle::Components::SystemType::Replication;
+
 }
 void Cle::World::DestroyObject(
 	entt::registry& registry,
 	entt::entity existing)
 {
-
 	if (!registry.any_of<TreeInfo>(existing))
 	{
 		std::cout << "no tree info\n";
@@ -112,7 +180,7 @@ void Cle::World::DestroyObject(
 		
 
 	auto children = registry.get<TreeInfo>(existing).getChildren();
-	std::cout << children.size() << std::endl;
+	//std::cout << children.size() << std::endl;
 	for (auto child : children)
 	{
 		std::cout << "destorying child\n";
@@ -128,7 +196,6 @@ void Cle::World::DestroyObject(
 		registry.get<TreeInfo>(parent)
 			.removeChild(existing, &registry);
 	}
-	std::cout << "done\n";
 }
 
 

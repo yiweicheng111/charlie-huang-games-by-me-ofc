@@ -41,6 +41,7 @@ namespace Cle
         }
         bool modelPathDirty = false;
         bool modelIndexDirty = false;
+        bool uploaded = false;
         const void* getGeoID() const {
             return geometry.get();
         }

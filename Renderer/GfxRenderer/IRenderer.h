@@ -32,31 +32,29 @@ namespace Cle::Renderer
 		int resolutionWidth = 2000;
 		int resolutionHeight = 2000;
 		int width, height = 1;
-
 		void onDeleteFunction(entt::registry& r, entt::entity e)
 		{
 		//	std::cout << "onDeleteFunction fired for entity " << (uint32_t)e << "\n";
 			
-			if (!r.any_of<std::shared_ptr<Cle::GenericMesh>>(e)) return;
+			if (!r.any_of<Cle::GenericMesh>(e)) return;
 
-			auto& mesh = r.get<std::shared_ptr<Cle::GenericMesh>>(e);
-			std::string modelPath = mesh->getModelPath();
-			auto& geoId = mesh->geometry;
-			auto index = mesh->geometry->instancedIndex;
+			auto& mesh = r.get<Cle::GenericMesh>(e);
+			std::string modelPath = mesh.getModelPath();
+			auto& geoId = mesh.geometry;
+			auto index = mesh.geometry->instancedIndex;
 
 			auto& vec = AssetHandler::getInstance().modelCache[modelPath];
 
 			bool shouldRemove = AssetHandler::getInstance().UnloadModel(modelPath, index,mesh);
-			mesh.reset();
 			if (shouldRemove)
 			{
-				std::cout << "erased\n";
+			//	std::cout << "erased\n";
 				gpuMeshCache.erase(geoId);
 			}
 
 		 	auto gpuIt = gpuMeshCache.find(geoId);
 	    	//std::cout << "count " << gpuIt->second.use_count() << std::endl;
-			std::cout << "gpu mesh cache size " << gpuMeshCache.size() << std::endl;
+		//	std::cout << "gpu mesh cache size " << gpuMeshCache.size() << std::endl;
 
 			//if (gpuIt != gpuMeshCache.end() && gpuIt->second.use_count() <= 1)
 			//{
@@ -77,9 +75,10 @@ namespace Cle::Renderer
 		}
 		std::unordered_map<std::string, std::shared_ptr<IShader>> shaderCache;
 
-		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh) = 0;
+		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(Cle::GenericMesh mesh) = 0;
 		virtual std::shared_ptr<Cle::Gfx::ITexture> getOrMakeTexture(const std::string& path) = 0;
-	
+		virtual std::shared_ptr<Cle::Gfx::ITexture> createCubeMapTexture(Cle::Components::CubeMapTexture& tex) = 0;
+
 
 		/*
 		virtual std::shared_ptr<Cle::Gfx::Material> getOrMakeMaterial(Cle::Components::MaterialRef& mat)
@@ -106,7 +105,7 @@ namespace Cle::Renderer
 		virtual void clearFrame(GLFWwindow* window) = 0;
 		virtual void clearColor(float r, float g, float b, float w) = 0;
 		virtual void drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera) = 0;
-		virtual void uploadMesh(entt::entity e, std::shared_ptr<Cle::GenericMesh>
+		virtual void uploadMesh(entt::entity e, Cle::GenericMesh
 			mesh, entt::registry& registry);
 		virtual void lightPass() = 0;
 		//virtual void SyncMeshes(entt::registry& registry) = 0;
@@ -117,7 +116,7 @@ namespace Cle::Renderer
 		virtual bool isWithinFarPlane(entt::entity entity, Cle::Gfx::Camera& camera);
 		virtual std::shared_ptr<Cle::Gfx::IMesh> assignLOD(entt::entity entity, glm::vec3 viewPosition) = 0;
 		virtual unsigned int getImage() const = 0;
-		static std::unique_ptr<IRenderer> Create(entt::registry* registry);
+		static std::shared_ptr<IRenderer> Create(entt::registry* registry);
 		virtual void onSceneLoaded();
 		static inline const std::vector<float> cube = {
 			-1.0f,  1.0f, -1.0f,

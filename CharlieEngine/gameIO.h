@@ -19,6 +19,7 @@ namespace Cle
 
 		gameIO(gameIO&&) = delete;
 		gameIO& operator=(gameIO&&) = delete;
+		std::function<void()> onLoaded;
 		static gameIO& getInstance()
 		{
 			static gameIO instance;

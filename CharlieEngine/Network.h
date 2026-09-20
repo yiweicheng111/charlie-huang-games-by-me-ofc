@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Components.h"
 #include "shared.h"
+#include "World.h"
 namespace Cle
 {
 	class Network
@@ -19,9 +20,12 @@ namespace Cle
 			static Network instance;
 			return instance;
 		}
-		static void setRegistry(entt::registry* registry)
+		Cle::World* world;
+		static void setVariables(entt::registry* registry, Cle::World* world)
 		{
 			getInstance().registry = registry;
+			getInstance().world = world;
+
 		}
 		Network(const Network&) = delete;
 		Network& operator=(const Network&) = delete;

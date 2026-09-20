@@ -29,15 +29,23 @@ int main() {
 	//std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
 	//std::filesystem::current_path("../");sa
 
+
+/*
 	std::cout << std::filesystem::current_path() << std::endl;;
 	auto scripttest = app.World->CreateDebugObject();
 	app.registry.emplace<Cle::Script>(scripttest,"Scripts/script.lua");
+	app.registry.get<Cle::Components::TreeInfo>(scripttest).setParent(scripttest,app.World->Client,&app.registry);
 	app.registry.get<Cle::Components::Name>(scripttest).setName("script");
-	app.registry.emplace<Cle::Audio::Sound>(scripttest,"beatit.mp3",&app.audio_engine,true);
-	//app.registry.get<Cle::Audio::Sound>(scripttest).Play();
+	app.registry.emplace<std::unique_ptr< Cle::Audio::Sound>>(scripttest, std::make_unique<Cle::Audio::Sound>("beatit.mp3",&app.audio_engine,true));
+	app.registry.get<std::unique_ptr<Cle::Audio::Sound>>(scripttest)->Play();
 
 	std::cout << app.registry.get<Cle::Script>(scripttest).path << std::endl;
-	app.World->addModelToScene("map/f.gltf");
+
+	auto s2 = app.World->CreateDebugObject();
+	app.registry.emplace<Cle::Script>(s2, "Scripts/server.lua");
+	app.registry.get<Cle::Components::TreeInfo>(s2).setParent(s2, app.World->Server, &app.registry);
+	app.registry.get<Cle::Components::Name>(s2).setName("serverscript");*/
+
 /*	const std::vector<std::shared_ptr<Cle::GenericMesh>>& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel("map/f.gltf");
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
@@ -70,7 +78,7 @@ int main() {
 
 		i++;
 	}*/
-	std::cout << app.registry.storage<entt::entity>().size();
+//	std::cout << app.registry.storage<entt::entity>().size();
 
 	//Cle::Physics::Physics1::reg(app.registry);
 	//Cle::Physics::Physics1::physicssystem->GetBodyInterface().SetMotionType(app.registry.get<Cle::Components::PhysicsComponent>(floor).ID, JPH::EMotionType::Static, JPH::EActivation::Activate);

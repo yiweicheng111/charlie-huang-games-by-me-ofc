@@ -16,6 +16,13 @@
 #define lightMap 2
 #define skyboxSlot 3
 #define shadowMapSlot 4
+#define texr 5
+#define texl 6 
+#define text 7
+#define texb 8
+#define texbk 9
+#define texf 10
+
 using namespace Cle;
 static Cle::Gfx::Camera g_camera;
 void Cle::OPENGL::Renderer::beginFrame()
@@ -56,6 +63,10 @@ void Cle::OPENGL::Renderer::lightPass()
 	buffer.shader->UniformLights(buffer.lightTexture, lightMap);
 
 
+}
+std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::createCubeMapTexture(Cle::Components::CubeMapTexture& tex)
+{
+	return std::shared_ptr<Cle::Gfx::ITexture>();
 }
 static GLuint shadowFBO, shadowMap;
 
@@ -113,8 +124,8 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 			depthShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 
-			auto view = m_registry->view<std::shared_ptr<GenericMesh>, Transform>();
-			view.each([&](auto entity, std::shared_ptr<GenericMesh>& mesh, Transform& transform)
+			auto view = m_registry->view<GenericMesh, Transform>();
+			view.each([&](auto entity, GenericMesh& mesh, Transform& transform)
 				{
 					if (isWithinFarPlane(entity, m_camera))
 					{
@@ -129,7 +140,6 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 	auto drawSkybox = [&]()
 		{
 
-			static auto cubemapTexture = phraseSkybox(lightingInstance.skybox.faces)->getID();
 
 			static Cle::OPENGL::VBO skyboxVBO(cube);
 			static Cle::OPENGL::VAO skyboxVAO(skyboxVBO.ID);
@@ -145,10 +155,7 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 			glBindVertexArray(skyboxVAO.ID);
 			if (lightingInstance.usesSkybox)
 			{
-				shader->setInt("usesSkybox", 1);
-				shader->setInt("skybox", skyboxSlot);
-				glActiveTexture(GL_TEXTURE0 + skyboxSlot);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+			
 			}
 			else
 			{
@@ -183,10 +190,15 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 			int totalMeshes = 0;
 			int totalDrawn = 0;
 			Frustum frustum = Frustum::createFrustumInCamera(m_camera);
-			auto view = m_registry->view<std::shared_ptr<GenericMesh>, Transform, Bounds>();
+			auto view = m_registry->view<GenericMesh, Transform>();
 
-			view.each([&](auto entity, std::shared_ptr<GenericMesh>& mesh, Transform& transform, Bounds& bounds) {
+			view.each([&](auto entity, GenericMesh& mesh, Transform& transform) {
 				//auto globalSphere = bounds.sphere;
+
+				uploadMesh(entity, mesh, *m_registry);
+				if (!m_registry->any_of<Bounds>(entity)) return;
+
+				auto& bounds = m_registry->get<Bounds>(entity);
 				if (transform.dirty)
 				{
 					bounds.aabb.dirty = true;
@@ -268,27 +280,28 @@ Cle::OPENGL::Renderer::Renderer(entt::registry* registry) {
 	m_registry = registry;
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	registry->on_destroy<Cle::GenericMesh>().connect<&Cle::Renderer::IRenderer::onDeleteFunction>(this);
 
 
 }
-std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::getOrMakeMesh(std::shared_ptr<Cle::GenericMesh> mesh)
+std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::getOrMakeMesh( Cle::GenericMesh mesh)
 {
 	
-	auto id = mesh->geometry;
+	auto id = mesh.geometry;
 	if (!gpuMeshCache.contains(id))
 	{
-		gpuMeshCache[id] = std::make_shared<OPENGL::Mesh>(mesh);
+		gpuMeshCache[id] = std::make_shared<OPENGL::Mesh>(std::move(mesh));
 		gpuMeshCache[id]->gpuUploaded = true;
 
 	}
 	
 	return gpuMeshCache[id];
 
-	/*auto glMesh = mesh->geometry;
+	/*auto glMesh = mesh.geometry;
 	
-	if (!mesh->geometry->gpuUploaded) {
+	if (!mesh.geometry->gpuUploaded) {
 		mesh->geometry->gpuMesh = std::make_shared<OPENGL::Mesh>(mesh);
 		mesh->geometry->gpuUploaded = true;
 
@@ -389,9 +402,9 @@ void Cle::OPENGL::Renderer::setSettings()
 
 std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::assignLOD(entt::entity entity, glm::vec3 viewPosition)
 {
-	if (!m_registry->any_of<std::shared_ptr<GenericMesh>>(entity)) return 0;
+	if (!m_registry->any_of<GenericMesh>(entity)) return 0;
 
-	auto gmesh = m_registry->get < std::shared_ptr<GenericMesh>>(entity);
+	auto gmesh = m_registry->get < GenericMesh>(entity);
 	auto imesh = getOrMakeMesh(gmesh);
 	std::shared_ptr<Cle::OPENGL::Mesh> openglmesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(imesh);
 	//return openglmesh;
@@ -406,7 +419,13 @@ std::shared_ptr<Cle::Gfx::IMesh> Cle::OPENGL::Renderer::assignLOD(entt::entity e
 	else if (distance < 700 * 700) return openglmesh->getLodMesh(1);
 	else   return openglmesh->getLodMesh(2);
 
-	/*auto lodmesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(getOrMakeMesh(std::make_shared<Cle::GenericMesh>(gmesh->getVertices(), imesh->LODIndicesEBOMap[ebo])));
+	/*auto lodmesh = std::static_pointer_cast<Cle::OPENGL::Mesh>(getOrMakeMesh(std::make_shared<Cle::GenericMesh>(
+	
+	
+	
+	
+	
+	getVertices(), imesh->LODIndicesEBOMap[ebo])));
 
 	lodmesh->m_EBO = openglmesh->m_EBO;
 	lodmesh->m_VAO = openglmesh->m_VAO;
@@ -452,20 +471,23 @@ std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::phraseSkybox(std::vec
 
 void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, Cle::Gfx::Camera& camera)
 {
+
 	if (!registry.any_of < std::shared_ptr<IShader>>(e))
 	{
 		registry.emplace_or_replace<std::shared_ptr<Cle::OPENGL::Shader>>(e, std::static_pointer_cast<Cle::OPENGL::Shader>(getDefaultShader()));
 	}
 
-	if (!registry.all_of<Cle::Components::Transform, std::shared_ptr<GenericMesh>, std::shared_ptr<Cle::OPENGL::Shader>, Components::Bounds>(e)) {
-		return;
-	}
-	cleanDirtyMesh(e);
+	if (!registry.all_of<Cle::Components::Transform, GenericMesh, std::shared_ptr<Cle::OPENGL::Shader>, Components::Bounds>(e)) {
 
+		return;
+	}					
+
+	cleanDirtyMesh(e);
 	//Cle::Components::MaterialRef, 
 //	auto& material = registry.get<Cle::Components::MaterialRef>(e);
 	auto& shader = registry.get < std::shared_ptr < Cle::OPENGL::Shader >>(e);
-	auto& gmesh = registry.get<std::shared_ptr<GenericMesh>>(e);
+	auto& gmesh = registry.get<GenericMesh>(e);
+	uploadMesh(e, gmesh, registry);
 	auto& bounds = registry.get<Components::Bounds>(e);
 	shader->Bind();
 
@@ -495,10 +517,10 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 
 	
 	shader->setVec3("vPosition", transform.getPosition());
-	/*if (gmesh->m_AABB.dirty)
+	/*if (gmesh.m_AABB.dirty)
 		{
-			gmesh->m_local_AABB.updateToWorld(gmesh->getVertices(), transform.model);
-			gmesh->m_AABB.dirty = false;
+			gmesh.m_local_AABB.updateToWorld(gmesh.getVertices(), transform.model);
+			gmesh.m_AABB.dirty = false;
 		}*/
 	if (registry.any_of < std::shared_ptr<Cle::Gfx::ITexture>>(e)) {
 		auto& tex = registry.get < std::shared_ptr<Cle::Gfx::ITexture>>(e);
@@ -513,6 +535,41 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 	else {
 		shader->setInt("usesMeshColorMap", (int)(false));
 	}
+	if (registry.any_of <Cle::Components::CubeMapTexture>(e)) {
+		auto& tex = registry.get <Cle::Components::CubeMapTexture>(e);
+		shader->setInt("usesMeshCubeMap", (int)(true));
+
+		for (int i = 0; i < 6; i++)
+		{
+			glActiveTexture(GL_TEXTURE0+texr + i);
+
+			std::string hname = "hasCubeTexture[" + std::to_string(i) + "]";
+			std::string name = "cubeTexture[" + std::to_string(i) + "]";
+
+			if (!tex.faces[i])
+			{
+				shader->setInt(hname, 0);
+				glBindTexture(GL_TEXTURE_2D, 0);
+				continue;
+
+			}
+			glBindTexture(GL_TEXTURE_2D, tex.faces[i]->getID());
+
+			shaderCache["MeshShader"]->setInt(hname, 1);
+
+			shaderCache["MeshShader"]->setInt(name.c_str(), texr+ i);
+
+		
+		}		
+
+	
+	}
+	else
+	{
+		shader->setInt("usesMeshCubeMap", (int)(false));
+	}
+
+
 
 	//const auto gpumaterial = getOrMakeMaterial(registry.get<Cle::Components::MaterialRef>(e));
 

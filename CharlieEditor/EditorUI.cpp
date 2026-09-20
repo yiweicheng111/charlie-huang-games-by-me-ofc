@@ -5,11 +5,13 @@
 #include "Audio/AudioEngine.h"
 #include "shared.h"
 #include "imgui_internal.h"
+#include "Scripting/Event.h"
+#include "Camera.h"
 using namespace Cle::Components;
 
 namespace Cle::Editor
 {
-	Cle::Editor::EditorUI::EditorUI(Cle::World* World, GLFWwindow* m_window) : m_window(m_window), m_registry(World->registry), World(World)
+	Cle::Editor::EditorUI::EditorUI(Cle::World* World, GLFWwindow* m_window, std::shared_ptr<Cle::Renderer::IRenderer> r) : m_window(m_window), m_registry(World->registry), World(World), renderer(r)
 	{
 		ImGui::CreateContext();
 		io = &ImGui::GetIO();
@@ -43,10 +45,13 @@ namespace Cle::Editor
 			}
 			std::string name = m_registry->get<Cle::Components::Name>(child).getName();
 			ImGui::PushID((int)child);
-			DrawContextMenu(child);
 			if (m_Focused_Entity == child) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
 			else ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 10.0f));
+
 			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Framed);
+			DrawContextMenu(child);
 
 			if (open && ImGui::IsItemToggledOpen())
 			{
@@ -60,7 +65,7 @@ namespace Cle::Editor
 				ImGui::TreePop();
 			}
 			ImGui::PopStyleColor();
-
+			ImGui::PopStyleVar();
 			ImGui::PopID();
 		}
 	}
@@ -117,19 +122,49 @@ namespace Cle::Editor
 			ImGui::End();
 			return;
 		}
-		Transform* transform = m_registry->try_get<Transform>(m_Focused_Entity);
-		LightComponent* lightComponent = m_registry->try_get<LightComponent>(m_Focused_Entity);
-		Color* color = m_registry->try_get<Color>(m_Focused_Entity);
-		auto name = m_registry->try_get<Name>(m_Focused_Entity);
+	
+		Cle::EventHolder* events = m_registry->try_get<EventHolder>(m_Focused_Entity);
+		std::unordered_map<std::string, std::string> pendingRename;
+		std::unordered_map<Event*, std::string> renamedEvents;
 
-		auto mesh = m_registry->try_get<std::shared_ptr<Cle::GenericMesh>>(m_Focused_Entity);
-		Cle::Audio::Sound* soundptr = m_registry->try_get<Cle::Audio::Sound>(m_Focused_Entity);
+		if (events)
+		{
 
-		Cle::Components::CubeMapTexture* cubeMap = m_registry->try_get<Cle::Components::CubeMapTexture>(m_Focused_Entity);
+			if (ImGui::CollapsingHeader("Events"))
+			{
+				if (ImGui::Button("Add new event"))
+				{
+					events->getOrMakeEvent(std::string("event" + std::to_string(events->events.size())));
+				}
+
+				for (auto& event : events->events)
+				{
+					ImGui::PushID(&event);
+					std::string temp = event.name;
+					ImGui::InputText(event.name.c_str(), &temp);
+					pendingRename[event.name] = temp;
+					if (ImGui::IsItemDeactivatedAfterEdit())
+					{
+
+						renamedEvents[&event] = pendingRename[event.name];
+					}
+					ImGui::PopID();
+
+				}
+			
+				
+			}
+			for (auto& [eventPtr, newName] : renamedEvents)
+			{
+				std::string oldName = eventPtr->name;
+				eventPtr->name = newName;
+			}
+		
+		}
 		auto properties = Cle::GetEntityProperties(*m_registry,m_Focused_Entity);
 		for (const auto& prop : properties)
 		{
-		
+				
 				if (ImGui::TreeNodeEx(prop.parentName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					for (const auto& subprop : prop.properties)
@@ -149,7 +184,9 @@ namespace Cle::Editor
 							{
 								subprop.data.set(instance, v);
 							}
+
 						}
+					
 						else if (subprop.type == entt::resolve<bool>())
 						{
 							auto v = subprop.data.get(instance).cast<bool>();
@@ -314,17 +351,23 @@ namespace Cle::Editor
 			{
 				std::string texturePath;
 				std::string modelPath;
-				auto gmesh = m_registry->get<std::shared_ptr<GenericMesh>>(m_Focused_Entity);
-				//	texturePath = gmesh->texture ? gmesh->texture->getPath()  : "null";
-				std::string path = gmesh->getModelPath();
-				int mindex = gmesh->getMeshIndex();
+				auto gmesh = m_registry->get<
+				>(m_Focused_Entity);
+				//	texturePath = 
+				
+				
+				
+				
+				texture ? gmesh.texture->getPath()  : "null";
+				std::string path = gmesh.getModelPath();
+				int mindex = gmesh.getMeshIndex();
 				if (ImGui::InputText("Model path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh->getMeshIndex()), *m_registry);
+					renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh.getMeshIndex()), *m_registry);
 				}
 				if (ImGui::DragInt("Model mesh index", &mindex) && glfwGetKey(m_window, GLFW_KEY_ENTER))
 				{
-					World->renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex), *m_registry);
+					renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex), *m_registry);
 
 				}
 
@@ -367,6 +410,10 @@ namespace Cle::Editor
 		if (e == entt::null) return;
 		if (ImGui::BeginPopupContextItem(("context" + std::to_string((int)e)).c_str()))
 		{
+			if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+			{
+				pointerBusy = true;
+			}
 			if (ImGui::MenuItem("Copy"))
 			{
 
@@ -383,6 +430,11 @@ namespace Cle::Editor
 				if (ImGui::MenuItem("Texture")) {
 					if (!m_registry->any_of<Cle::Components::CubeMapTexture>(e)) {
 						m_registry->emplace<Cle::Components::CubeMapTexture>(e);
+					}
+				}
+				if (ImGui::MenuItem("Event")) {
+					if (!m_registry->any_of<Cle::EventHolder>(e)) {
+						m_registry->emplace<Cle::EventHolder>(e,e,m_registry);
 					}
 				}
 				ImGui::EndMenu();
@@ -410,7 +462,7 @@ namespace Cle::Editor
 			);
 
 
-		ImGui::Image((ImTextureID)World->renderer.getImage(), ImGui::GetContentRegionAvail(),ImVec2(0,1),ImVec2(1,0));
+		ImGui::Image((ImTextureID)renderer->getImage(), ImGui::GetContentRegionAvail(),ImVec2(0,1),ImVec2(1,0));
 		ImGui::End();
 	}
 	void EditorUI::DrawGizmo(entt::entity entity)
