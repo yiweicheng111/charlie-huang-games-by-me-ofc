@@ -1,0 +1,580 @@
+#include "EditorUI.h"
+#include "Mesh.h"
+#include <filesystem>
+#include "imgui/misc/cpp/imgui_stdlib.h"
+#include "Audio/AudioEngine.h"
+#include "shared.h"
+#include "imgui_internal.h"
+#include "Scripting/Event.h"
+#include "Camera.h"
+using namespace Cle::Components;
+
+namespace Cle::Editor
+{
+	Cle::Editor::EditorUI::EditorUI(Cle::World* World, GLFWwindow* m_window, std::shared_ptr<Cle::Renderer::IRenderer> r) : m_window(m_window), m_registry(World->registry), World(World), renderer(r)
+	{
+		ImGui::CreateContext();
+		io = &ImGui::GetIO();
+		io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+
+		io->Fonts->AddFontFromFileTTF("./fonts/OpenSans.ttf", 18.0f);
+
+		ImGuiStyle& style = ImGui::GetStyle();
+		ImGui::StyleColorsDark();
+	//	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
+		//style.Colors[ImGuiCol_Text] = ImVec4(0.1, 0.1, 0.1, 1.0);
+		//style.Colors[ImGuiCol_TitleBg] = ImVec4(0.8, 0.8, 0.8, 1.0);
+		//style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.8, 0.8, 0.8, 1.0);
+		style.WindowRounding = 5.0f;
+		if (m_Pipeline == Cle::Gfx::Pipeline::OPENGL) {
+			ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+			ImGui_ImplOpenGL3_Init("#version 330 core");
+
+		}
+	
+	}
+	void EditorUI::DrawChildren(entt::entity parent)
+	{
+		if (!m_registry->any_of<TreeInfo>(parent)) return;
+		auto& children = m_registry->get<TreeInfo>(parent).getChildren();
+		if (children.empty()) return;
+		for (entt::entity child : children) {
+			if (!m_registry->any_of<Name>(child)) {
+				m_registry->emplace<Name>(child, "Untitled Object");
+			}
+			std::string name = m_registry->get<Cle::Components::Name>(child).getName();
+			ImGui::PushID((int)child);
+			if (m_Focused_Entity == child) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
+			else ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 10.0f));
+
+			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Framed);
+			DrawContextMenu(child);
+
+			if (open && ImGui::IsItemToggledOpen())
+			{
+				m_Focused_Entity = child;
+			}
+
+			if (open)
+			{
+				DrawChildren(child);
+
+				ImGui::TreePop();
+			}
+			ImGui::PopStyleColor();
+			ImGui::PopStyleVar();
+			ImGui::PopID();
+		}
+	}
+	static bool explorerHovered = false;
+	static bool propertiesHovered = false;
+	void EditorUI::DrawExplorer()
+	{
+		
+		ImGui::Begin("Explorer");
+		explorerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+	
+	
+	
+		if (ImGui::TreeNodeEx("World", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			for (auto e : m_registry->view<TreeInfo>())
+			{
+				if (m_registry->get<TreeInfo>(e).getParent() != entt::null) continue;
+				if (!m_registry->any_of<Name>(e)) m_registry->emplace<Name>(e, "Untitled Object");
+				ImGui::PushID((int)e);
+
+				if (m_Focused_Entity == e) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
+				else ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+				bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).getName().c_str(), ImGuiTreeNodeFlags_Framed);
+
+				DrawContextMenu(e);
+				if (open && ImGui::IsItemToggledOpen())
+				{
+					m_Focused_Entity = e;
+				}
+				if (open)
+				{
+					DrawChildren(e);
+					ImGui::TreePop();
+				}
+
+				ImGui::PopStyleColor();
+
+				ImGui::PopID();
+			}
+			ImGui::TreePop();
+		}
+		ImGui::End();
+
+	}
+	void EditorUI::DrawProperties()
+	{
+		
+		ImGui::Begin("Properties");
+		propertiesHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+
+		if (m_Focused_Entity == entt::null)
+		{
+			ImGui::End();
+			return;
+		}
+	
+		Cle::EventHolder* events = m_registry->try_get<EventHolder>(m_Focused_Entity);
+		std::unordered_map<std::string, std::string> pendingRename;
+		std::unordered_map<Event*, std::string> renamedEvents;
+
+		if (events)
+		{
+
+			if (ImGui::CollapsingHeader("Events"))
+			{
+				if (ImGui::Button("Add new event"))
+				{
+					events->getOrMakeEvent(std::string("event" + std::to_string(events->events.size())));
+				}
+
+				for (auto& event : events->events)
+				{
+					ImGui::PushID(&event);
+					std::string temp = event.name;
+					ImGui::InputText(event.name.c_str(), &temp);
+					pendingRename[event.name] = temp;
+					if (ImGui::IsItemDeactivatedAfterEdit())
+					{
+
+						renamedEvents[&event] = pendingRename[event.name];
+					}
+					ImGui::PopID();
+
+				}
+			
+				
+			}
+			for (auto& [eventPtr, newName] : renamedEvents)
+			{
+				std::string oldName = eventPtr->name;
+				eventPtr->name = newName;
+			}
+		
+		}
+		auto properties = Cle::GetEntityProperties(*m_registry,m_Focused_Entity);
+		for (const auto& prop : properties)
+		{
+				
+				if (ImGui::TreeNodeEx(prop.parentName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					for (const auto& subprop : prop.properties)
+					{
+						auto meta = entt::resolve(subprop.componentType);
+						if (!meta)
+							continue;
+						auto storage = m_registry->storage(subprop.componentType);
+						if (!storage || !storage->contains(m_Focused_Entity))
+							continue;
+						auto instance = meta.from_void(storage->value(m_Focused_Entity));
+
+						if (subprop.type == entt::resolve<float>())
+						{
+							auto v = subprop.data.get(instance).cast<float>();
+							if (ImGui::DragFloat(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+
+						}
+					
+						else if (subprop.type == entt::resolve<bool>())
+						{
+							auto v = subprop.data.get(instance).cast<bool>();
+							if (ImGui::Checkbox(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<int>())
+						{
+							auto v = subprop.data.get(instance).cast<int>();
+							if (ImGui::DragInt(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<std::string>())
+						{
+							auto v = subprop.data.get(instance).cast<std::string>();
+
+							if (ImGui::InputText(subprop.name.c_str(), &v))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<glm::vec3>())
+						{
+							auto v = subprop.data.get(instance).cast<glm::vec3>();
+
+							if (ImGui::DragFloat3(subprop.name.c_str(), glm::value_ptr(v)))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<glm::vec4>())
+						{
+							auto v = subprop.data.get(instance).cast<glm::vec4>();
+
+							if (ImGui::DragFloat4(subprop.name.c_str(), glm::value_ptr(v)))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+						else if (subprop.type == entt::resolve<glm::quat>())
+						{
+							auto v = glm::eulerAngles(subprop.data.get(instance).cast< glm::quat>());
+
+							if (ImGui::DragFloat3(subprop.name.c_str(), glm::value_ptr(v)))
+							{
+								subprop.data.set(instance, v);
+							}
+						}
+					}
+
+					ImGui::TreePop();	
+				}
+		}
+		/*if (name)
+		{
+			if (ImGui::TreeNodeEx("Name", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				std::string newname = name->getName();
+				ImGui::InputText("Name", &newname);
+				name->setName(newname);
+
+				ImGui::TreePop();
+			}
+		}
+		if (soundptr)
+		{
+			if (ImGui::TreeNodeEx("Sound", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				std::string soundPath = soundptr->getPath();
+				float timePosition = soundptr->getTimePosition();
+				bool playing = soundptr->isPlaying();
+				ImGui::DragFloat("Volume", &soundptr->volume);
+				if (ImGui::InputText("Path", &soundPath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
+					soundptr->setPath(soundPath);
+				}
+				if (ImGui::DragFloat("Time position", &timePosition) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
+					soundptr->setTimePosition(timePosition);
+				}
+				if (ImGui::Checkbox("Playing", &playing))
+				{
+					if (!playing) soundptr->Pause();
+					else soundptr->Play();
+				}
+				if (ImGui::Checkbox("Global", &soundptr->global))
+				{
+				}
+				ImGui::TreePop();
+
+			}
+		}
+		if (transform)
+		{
+			if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				auto pos = transform->getPosition();
+				auto orien = glm::eulerAngles(transform->getOrientation());
+				auto scale = transform->getScale();
+				if (ImGui::DragFloat3("Position", (float*)&pos))
+				{
+					transform->setPosition(pos);
+
+				}
+				if (ImGui::DragFloat3("Orientation", (float*)&orien))
+				{
+					transform->setOrientation(glm::quat(orien));
+
+				}
+				if (ImGui::DragFloat3("Scale", (float*)&scale))
+				{
+					transform->setScale(scale);
+
+				}
+
+				ImGui::TreePop();
+
+			}
+		}
+		if (lightComponent)
+		{
+			glm::vec3 Color = lightComponent->getColor();
+			float radius = lightComponent->getRadius();
+			if (ImGui::TreeNodeEx("Light", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				if (ImGui::ColorEdit3("Color", (float*)&Color))
+				{
+					lightComponent->setColor(Color);
+				}
+
+				if (ImGui::InputFloat("Radius", &radius))
+				{
+					lightComponent->setRadius(radius);
+				}
+
+
+				ImGui::TreePop();
+			}
+		}
+		if (color)
+		{
+			if (ImGui::TreeNodeEx("Color", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+
+				glm::vec3 Color = color->value;
+				if (ImGui::ColorEdit3("Color", (float*)&Color))
+				{
+					color->value = glm::vec4(Color, 1);
+				}
+				ImGui::TreePop();
+
+			}
+		}
+
+		if (mesh)
+		{
+			if (ImGui::TreeNodeEx("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				std::string texturePath;
+				std::string modelPath;
+				auto gmesh = m_registry->get<
+				>(m_Focused_Entity);
+				//	texturePath = 
+				
+				
+				
+				
+				texture ? gmesh.texture->getPath()  : "null";
+				std::string path = gmesh.getModelPath();
+				int mindex = gmesh.getMeshIndex();
+				if (ImGui::InputText("Model path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
+					renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh.getMeshIndex()), *m_registry);
+				}
+				if (ImGui::DragInt("Model mesh index", &mindex) && glfwGetKey(m_window, GLFW_KEY_ENTER))
+				{
+					renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex), *m_registry);
+
+				}
+
+				ImGui::TreePop();
+
+			}
+		}*/
+		
+		ImGui::End();
+	}
+	void EditorUI::DrawTopBar()
+	{
+		ImGui::Begin("Top");
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+		{
+			pointerBusy = true;
+		}
+
+
+		if (ImGui::Button("Insert part"))
+		{
+			ImGui::OpenPopup("Geometries");
+		}
+		if (ImGui::BeginPopup("Geometries"))
+		{
+			if (ImGui::Selectable("Cube"))
+			{
+				auto ents = World->addModelToScene("primitives/cube.gltf");
+				//auto ents = World->addModelToScene("map/g.gltf");
+
+				if (ents.size()>=1) m_Focused_Entity = ents.at(0);
+			}
+			ImGui::EndPopup();
+		}
+	
+		ImGui::End();
+	}
+	void EditorUI::DrawContextMenu(entt::entity e)
+	{
+		if (e == entt::null) return;
+		if (ImGui::BeginPopupContextItem(("context" + std::to_string((int)e)).c_str()))
+		{
+			if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+			{
+				pointerBusy = true;
+			}
+			if (ImGui::MenuItem("Copy"))
+			{
+
+			}
+			if (ImGui::BeginMenu("Add"))
+			{
+
+
+				if (ImGui::MenuItem("Light")) {
+					if (!m_registry->any_of<Cle::Components::LightComponent>(e)) {
+						m_registry->emplace<Cle::Components::LightComponent>(e);
+					}
+				}
+				if (ImGui::MenuItem("Texture")) {
+					if (!m_registry->any_of<Cle::Components::CubeMapTexture>(e)) {
+						m_registry->emplace<Cle::Components::CubeMapTexture>(e);
+					}
+				}
+				if (ImGui::MenuItem("Event")) {
+					if (!m_registry->any_of<Cle::EventHolder>(e)) {
+						m_registry->emplace<Cle::EventHolder>(e,e,m_registry);
+					}
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndPopup();
+		}
+	}
+	void EditorUI::DrawGamePanel()
+	{
+		ImGui::Begin("Game");
+		auto size = ImGui::GetWindowSize();
+		if (!m_registry->ctx().contains<Camera>())
+		{
+			ImGui::End();
+			return;
+		}
+		static auto& m_camera = m_registry->ctx().get<Camera>();
+
+		m_camera.width = size.x;
+		m_camera.height = size.y;
+		m_camera.aspect = size.x / (float)size.y;
+		mousePosRelativeToGame = glm::vec2(
+			size.x*(ImGui::GetMousePos().x - ImGui::GetCursorScreenPos().x )/ ImGui::GetContentRegionAvail().x
+			, size.y * (ImGui::GetMousePos().y - ImGui::GetCursorScreenPos().y) / ImGui::GetContentRegionAvail().y
+			);
+
+
+		ImGui::Image((ImTextureID)renderer->getImage(), ImGui::GetContentRegionAvail(),ImVec2(0,1),ImVec2(1,0));
+		ImGui::End();
+	}
+	void EditorUI::DrawGizmo(entt::entity entity)
+	{
+		if (!m_registry->ctx().contains<Camera>()) return;
+		auto& m_camera = m_registry->ctx().get<Camera>();
+		
+		static auto gizmoType = ImGuizmo::OPERATION::TRANSLATE;
+		if (glfwGetKey(m_window, GLFW_KEY_E) == GLFW_PRESS) {
+			gizmoType = ImGuizmo::OPERATION::TRANSLATE;
+		}
+		if (glfwGetKey(m_window, GLFW_KEY_R) == GLFW_PRESS) {
+			gizmoType = ImGuizmo::OPERATION::SCALE;
+		}
+		if (glfwGetKey(m_window, GLFW_KEY_T) == GLFW_PRESS) {
+			gizmoType = ImGuizmo::OPERATION::ROTATE;
+		}
+		Cle::Components::Transform* transform = m_registry->try_get<Cle::Components::Transform>(entity);
+		if (!transform) return;
+		ImGui::Begin("Game");
+
+		ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+
+
+		//glfwGetWindowSize(m_window, &width, &height);
+		auto size = ImGui::GetWindowSize();
+		auto pos = ImGui::GetWindowPos();
+		ImGuizmo::SetRect(
+			pos.x,
+			pos.y,
+			size.x,
+			size.y
+		);
+		glm::mat4 modelCopy = transform->getRelativeModel(m_camera);
+
+		ImGuizmo::Manipulate(
+			glm::value_ptr(m_camera.getViewMatrix()),
+			glm::value_ptr(m_camera.getProjection()),
+			gizmoType,
+			ImGuizmo::LOCAL,
+			glm::value_ptr(modelCopy)
+		);
+		if (ImGuizmo::IsUsing()) {
+			glm::vec3 nscale, npos, nrot;
+			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelCopy), glm::value_ptr(npos), glm::value_ptr(nrot), glm::value_ptr(nscale));\
+				npos += m_camera.Position;
+			transform->setScale(nscale);  transform->setOrientation(glm::radians(nrot)); transform->setPosition(npos);
+		}
+		ImGui::End();
+	}
+	static void autodock(EditorUI* ui,ImGuiID& dockspace)
+	{
+		static ImGuiID leftDock, rightDock, rightBottom, center = 0;
+		static bool docked = false;
+		if (!docked)
+		{
+			ImGui::DockBuilderRemoveNode(dockspace);
+			ImGui::DockBuilderAddNode(dockspace, ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(
+				dockspace,
+				ImGui::GetMainViewport()->WorkSize
+			);
+			center = dockspace;
+
+			ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.30f, &leftDock, &center);
+			ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.30f, &rightDock, &center);
+		//	ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.25f, &rightBottom, &rightDock);
+
+			ImGui::DockBuilderDockWindow("Game", center);
+
+			ImGui::DockBuilderDockWindow("Explorer", rightDock);
+
+			ImGui::DockBuilderDockWindow("Properties", leftDock);
+
+			ImGui::DockBuilderFinish(dockspace);
+			docked = true;
+		}
+	}
+	void EditorUI::Update()
+	{
+		if (explorerHovered || propertiesHovered) pointerBusy = true;
+		else pointerBusy = false;
+		if (!m_registry->ctx().contains<Camera>())
+		{
+		//	std::cout << "no camera\n";
+			m_registry->ctx().emplace<Camera>();
+		}
+		static bool autodocked = false;
+		
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
+		ImGuiID dockspace = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
+		autodock(this, dockspace);
+		
+		
+
+		DrawGamePanel();
+		DrawExplorer();
+		DrawProperties();
+		DrawTopBar();
+		if (m_Focused_Entity != entt::null && m_registry->valid(m_Focused_Entity)) {
+			DrawGizmo(m_Focused_Entity);
+		}
+	
+		ImGui::GetIO().WantCaptureMouse = ImGuizmo::IsOver() ? false : ImGui::GetIO().WantCaptureMouse;
+
+		ImGui::Render();
+
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	}
+
+}

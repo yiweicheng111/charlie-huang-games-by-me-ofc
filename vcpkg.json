@@ -1,0 +1,7 @@
+{
+  "name": "charlie",
+  "builtin-baseline": "94a541197763a4f449a1b91478df48c0584a6256",
+  "dependencies": [
+    "reactphysics3d"
+  ]
+}

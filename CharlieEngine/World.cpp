@@ -1,0 +1,317 @@
+#include "World.h"
+#include <cereal/cereal.hpp>
+#include <cereal/access.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/archives/binary.hpp>
+#include "shared.h"
+#include "Audio/AudioEngine.h"
+#include "AssetHandler.h"
+using namespace Cle::Components;
+using namespace Cle::Gfx;
+
+Cle::World::World(entt::registry* registry) {
+
+	this->registry = registry;
+	registry->on_destroy<Cle::Components::TreeInfo>().connect<&Cle::World::DestroyObject>(*this);
+	registry->on_construct < Cle::Components::Name >().connect<&Cle::World::OnConstructed>(*this);
+	using namespace Cle::Components;
+	Scene = registry->create(); registry->emplace<TreeInfo>(Scene);  registry->emplace<Name>(Scene, "Scene");  registry->emplace_or_replace<SystemType>(Scene, SystemType{ SystemType::Scene });
+	Server = registry->create(); registry->emplace<TreeInfo>(Server); registry->emplace<Name>(Server, "Server");  registry->emplace_or_replace<SystemType>(Server, SystemType{ SystemType::Server });
+	Client = registry->create(); registry->emplace<TreeInfo>(Client); registry->emplace<Name>(Client, "Client");  registry->emplace_or_replace<SystemType>(Client, SystemType{ SystemType::Client });
+	Replicated = registry->create(); registry->emplace<TreeInfo>(Replicated); registry->emplace<Name>(Replicated, "Replicated");  registry->emplace_or_replace<SystemType>(Replicated, SystemType{ SystemType::Replication });
+	//Lighting = registry->create(); registry->emplace<TreeInfo>(Replicated); registry->emplace<Name>(Lighting, "Lighting"); registry->emplace<Cle::Lighting>(Lighting,Cle::Lighting::getInstance());
+	physicsWorld = physicsCommon.createPhysicsWorld();
+	physicsWorld->setGravity(reactphysics3d::Vector3(0, -180.0f, 0));
+	Cle::ScriptHandler::getInstance().setVariables(this, registry);
+
+	Cle::RegisterReflection(registry);
+	/*
+	Cle::gameIO::getInstance().onLoaded = [this]() {
+		Cle::ScriptHandler::getInstance().setVariables(this, this->registry);
+		};*/
+}
+void Cle::World::run()
+{
+	auto view = registry->view<Transform,Bounds>();
+
+	view.each([&](auto entity, Transform& transform,auto& bounds) {
+
+		if (transform.boundsDirty)
+		{
+			auto& bounds = registry->get<Bounds>(entity);
+			bounds.aabb.dirty = true;
+			bounds.sphere.dirty = true;
+			transform.boundsDirty = false;
+
+
+		}
+		});
+}
+
+entt::entity Cle::World::CreateDebugObject(Cle::GenericMesh GMesh)
+{
+	entt::entity charlie = registry->create();
+	registry->emplace < Cle::Components::TreeInfo > (charlie);
+	registry->emplace<MaterialRef>(charlie);
+	registry->emplace<Color>(charlie);
+	registry->emplace<Name>(charlie);
+
+	//registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
+
+	registry->emplace<Cle::Components::Transform>(charlie);
+	auto& t = registry->get<Cle::Components::Transform>(charlie);
+	//registry->emplace<Cle::Components::Name>(charlie, "charlie");
+	registry->emplace<PhysicsComponent>(charlie, t, &physicsCommon, physicsWorld);
+	registry->emplace<Cle::GenericMesh>(charlie, GMesh);
+
+	auto& m = registry->get<GenericMesh>(charlie);
+	t.setPosition(m.positionOffset);
+	t.setScale(m.scaleOffset);
+	t.setOrientation(m.orientationOffset);
+	registry->get < Cle::Components::TreeInfo >(charlie).setParent(charlie, Scene,registry);
+
+	return charlie;
+
+}
+
+entt::entity Cle::World::CreateDebugObject()
+{
+	entt::entity charlie = registry->create();
+	registry->emplace < Cle::Components::TreeInfo >(charlie);
+
+	//registry->get<Cle::Gfx::Material>(charlie).m_Shader.programID = renderer.getDefaultShader();
+
+	registry->emplace<Cle::Components::Name>(charlie, "charlie");
+
+
+		registry->get < Cle::Components::TreeInfo >(charlie).setParent(charlie, Scene, registry);
+
+	return charlie;
+
+}
+
+entt::entity Cle::World::CopyObject(entt::entity existing)
+{
+	entt::entity newent = registry->create();
+	if (registry->any_of<Transform>(existing)) {
+		registry->emplace<Transform>(newent, registry->get<Transform>(existing));
+	}
+	if (registry->any_of<Name>(existing)) {
+		registry->emplace<Name>(newent, registry->get<Name>(existing));
+	}
+	if (registry->any_of<PhysicsComponent>(existing)) {
+		auto& newTransform = registry->get<Cle::Components::Transform>(existing);
+		auto& original = registry->get<PhysicsComponent>(existing);
+		auto& newPhysics = registry->emplace<PhysicsComponent>(
+			newent,
+			newTransform,
+			original.physicsCommon,
+			original.physicsWorld,
+			original.name,
+			original.getAnchored()
+		);
+	}
+	if (registry->any_of<Color>(existing)) {
+		registry->emplace<Color>(newent, registry->get<Color>(existing));
+	}
+	if (registry->any_of<MaterialRef>(existing)) {
+		registry->emplace<MaterialRef>(newent, registry->get<MaterialRef>(existing));
+	}
+	if (registry->any_of<GenericMesh>(existing)) {
+		auto original = registry->get<GenericMesh>(existing);
+		original.uploaded = false;
+
+		registry->emplace<GenericMesh>(newent, original);
+	}
+	if (registry->any_of<TreeInfo>(existing)) {
+		auto& newTree = registry->emplace_or_replace<TreeInfo>(newent);
+		auto parent = registry->get<TreeInfo>(existing).getParent();
+		newTree.setParent(newent, registry->valid(parent) ? parent : Scene, registry);
+	}
+	if (registry->any_of< std::unique_ptr<Cle::Audio::Sound>>(existing)) {
+		auto& audio = registry->get< std::unique_ptr<Cle::Audio::Sound>>(existing);
+		registry->emplace<std::unique_ptr<Cle::Audio::Sound>>(newent,audio->Clone());
+	}
+
+	return newent;
+}
+
+std::vector<entt::entity> Cle::World::addModelToScene(const std::string& path)
+{
+	auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(path);
+	std::vector<entt::entity> entts;
+
+	//auto tex = renderer.getOrMakeTexture("c.jpg");
+	for (auto& I : ModelLoaded) {
+		//std::cout << j << std::endl;
+
+		auto e = CreateDebugObject(I);
+		entts.push_back(e);
+		registry->get<Cle::Components::Color>(e).value = glm::vec4(I.assimpRequestedColor, 1);
+	//	registry->emplace<Cle::Components::CubeMapTexture>(e, CubeMapTexture({ tex,tex,tex,tex,tex,tex }));
+
+	}
+	return entts;
+}
+void Cle::World::onSceneLoaded()
+{
+
+
+	for (auto e : registry->view<SystemType>())
+	{
+		const auto& t = registry->get<SystemType>(e);
+		if (t.type == SystemType::Server)
+			Server = e;
+
+		if (t.type == SystemType::Client)
+			Client = e;
+
+		if (t.type == SystemType::Replication)
+		{
+			Replicated = e;
+
+		}
+
+		if (t.type == SystemType::Scene)
+		{
+			Scene = e;
+
+		}
+	}
+}
+entt::entity Cle::World::getTopParent(entt::entity e)
+{
+	if (!registry->any_of<TreeInfo>(e)) return e;
+	entt::entity current = e;
+	entt::entity parent = registry->get<TreeInfo>(e).getParent();
+	while (parent != entt::null || registry->valid(parent))
+	{
+		current = parent;
+		if (!registry->any_of<TreeInfo>(current))
+		{
+			break;
+		}
+		if (parent == entt::null || !registry->valid(parent))
+			break;
+		parent = registry->get<TreeInfo>(current).getParent();
+	}
+	return current;
+}
+int Cle::World::getVisibility(entt::entity e)
+{
+	auto top = getTopParent(e);
+	auto systemType = registry->get_or_emplace<Cle::Components::SystemType>(top);
+	if (systemType.type == Cle::Components::SystemType::Replication)
+	{
+		return Cle::Components::SystemType::Replication;
+	}
+	if (systemType.type == Cle::Components::SystemType::Server)
+	{
+		return Cle::Components::SystemType::Server;
+	}
+	if (systemType.type == Cle::Components::SystemType::Client)
+	{
+		return Cle::Components::SystemType::Client;
+	}
+
+	return Cle::Components::SystemType::Replication;
+
+}
+void Cle::World::DestroyObject(
+	entt::registry& registry,
+	entt::entity existing)
+{
+	if (!registry.any_of<TreeInfo>(existing))
+	{
+		std::cout << "no tree info\n";
+
+		return;
+	}
+		
+
+	auto children = registry.get<TreeInfo>(existing).getChildren();
+	//std::cout << children.size() << std::endl;
+	for (auto child : children)
+	{
+		std::cout << "destorying child\n";
+		if (registry.valid(child))
+			registry.destroy(child);
+	}
+
+	auto parent = registry.get<TreeInfo>(existing).getParent();
+
+	if (registry.valid(parent) &&
+		registry.any_of<TreeInfo>(parent))
+	{
+		registry.get<TreeInfo>(parent)
+			.removeChild(existing, &registry);
+	}
+}
+
+
+
+void Cle::World::Snapshot(std::string path)
+{
+	/*std::ofstream f(path, std::ios::binary);
+	cereal::BinaryOutputArchive arch(f);
+	entt::snapshot snapshot(*registry);
+	auto view = registry->view<std::unique_ptr<IMesh>, Cle::Gfx::Material>();
+	view.each([&](const entt::entity entity, std::unique_ptr<IMesh>& mesh, Cle::Gfx::Material& material) {
+		Cle::MeshPacket meshpacket;
+		auto& gmesh = mesh->gMesh;
+		meshpacket.setMeshIndex(gmesh.loadedMeshIndex);
+		meshpacket.setPath(gmesh.ModelPath);
+		if (gmesh.texture) meshpacket.setTexturePath(gmesh.texture->getPath());
+		registry->emplace_or_replace<Cle::MeshPacket>(entity, meshpacket);
+
+		Cle::MaterialPacket matpacket;
+		matpacket.setColor(material.getColor());
+
+		if (material.getColorMap()) matpacket.setColorMap(material.getColorMap()->getPath());
+
+		registry->emplace_or_replace<Cle::MaterialPacket>(entity, matpacket);
+
+		});
+	snapshot
+		.get<entt::entity>(arch)
+		.get<Cle::Components::Transform>(arch)
+		.get<Cle::MeshPacket>(arch)
+		.get<Cle::Components::Name>(arch)
+		.get<Cle::MaterialPacket>(arch);*/
+}
+
+void Cle::World::LoadFile(std::string path)
+{
+	/*registry->clear();
+	std::ifstream f(path, std::ios::binary);
+	cereal::BinaryInputArchive arch(f);
+	entt::snapshot_loader loader{ *registry };
+	loader.get<entt::entity>(arch).
+		get<Cle::Components::Transform>(arch).
+		get<Cle::MeshPacket>(arch).
+		get<Cle::Components::Name>(arch).
+		get<Cle::MaterialPacket>(arch).orphans();
+	auto view = registry->view<Cle::MeshPacket, Cle::MaterialPacket>();
+
+
+
+	view.each([&](const entt::entity entity, auto& meshpacket, auto& materialpacket)
+		{
+
+			registry->emplace<TreeInfo>(entity);
+			auto& material = registry->emplace<Cle::Gfx::Material>(entity, renderer.getDefaultShader());
+			material.setColor(materialpacket.getColor());
+			material.setColorMap(renderer.createTexture(materialpacket.getColorMap()));
+
+			std::vector< Cle::GenericMesh> ModelLoaded = renderer.m_AssetHandler.LoadModel(meshpacket.getPath());
+			auto& mesh = registry->emplace<Cle::GenericMesh>(entity, ModelLoaded.at(meshpacket.getMeshIndex()));
+			mesh.texture = renderer.createTexture(meshpacket.getTexturePath());
+			renderer.uploadMesh(entity, *registry);
+
+			if (registry->any_of<Cle::Components::Transform>(entity))
+			{
+				auto& t = registry->get<Cle::Components::Transform>(entity);
+				t.setPosition(mesh.offset);
+			}
+		});*/
+}
