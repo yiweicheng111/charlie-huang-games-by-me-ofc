@@ -38,7 +38,7 @@ namespace Cle::OPENGL
 		Mesh() = default;
 		~Mesh() {
 			glDeleteBuffers(1, &m_VBO);  glDeleteBuffers(1, &m_EBO); glDeleteVertexArrays(1, &m_VAO);
-			
+		//	std::cout << "deleted glmesh\n";
 		}
 
 		Mesh(unsigned int VAO, unsigned int VBO)

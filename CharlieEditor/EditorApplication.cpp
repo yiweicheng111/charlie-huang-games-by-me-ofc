@@ -90,7 +90,12 @@ Cle::Editor::EditorApplication::EditorApplication()
 			Cle::ScriptHandler::getInstance().setVariables(this->World.get(), &this->registry);
 			
 		};
+	m_network->onEntityAdded = [this](entt::entity entity)
+		{
 
+			renderer->onEntityAddedFromServer(entity);
+
+		};
 /*
 	player = World.CreateDebugObject({}, {});
 	registry.get<Cle::Components::Transform>(player).setScale({ 1,1,1 });*/
@@ -211,7 +216,6 @@ void Cle::Editor::EditorApplication::Run()
 		renderer->clearFrame(window);
 		m_network->poll();
 		ScriptHandler::getInstance().run(glfwGetTime(),0.01f);
-
 	}
 }
 void Cle::Editor::EditorApplication::AudioPass() {

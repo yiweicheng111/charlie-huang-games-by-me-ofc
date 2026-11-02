@@ -14,7 +14,7 @@ static sol::object findFirstChild(const std::string& name,entt::registry* regist
 			return sol::make_object(lua,LuaEntity{ i,registry});
 		}
 	}
-	return sol::nil;
+	return sol::make_object(lua, sol::nil);
 }
 void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 {
@@ -32,13 +32,51 @@ void Cle::ScriptHandler::setVariables(World* world,entt::registry* registry)
 
 void Cle::ScriptHandler::openLibraries()
 {
-	lua.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::math);
+	lua.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::math, sol::lib::table);
 	lua.new_usertype<Cle::Event>("Event",
 		"Fire", &Cle::Event::Fire,
 		"Connect", &Cle::Event::Connect
 	);
+	lua.new_usertype<Cle::EventHolder>(
+		"EventComponent",
+		"Remove",
+		[this](EventHolder& component, const std::string& key) {
+			if (!component.registry ||
+				!component.registry->valid(component.entity))
+			{
+				return;
+
+			}
+			component.removeEvent(key);
+		},
+		sol::meta_function::index,
+
+		[this](EventHolder& component,
+			const std::string& key) -> sol::object
+		{
+			if (!component.registry ||
+				!component.registry->valid(component.entity))
+			{
+				return sol::make_object(lua, sol::nil);
+			}
+
+			auto& holder =
+				component.registry->get_or_emplace<Cle::EventHolder>(
+					component.entity,
+					component.entity,
+					component.registry
+				);
+
+			return sol::make_object(
+				lua,
+				std::ref(holder.getOrMakeEvent(key))
+			);
+		}
+	);
 	lua.new_usertype<Cle::UserInputService>("UserInputServiceType",
-		"isKeyDown", &Cle::UserInputService::IsKeyDown
+		"isKeyDown", &Cle::UserInputService::IsKeyDown,
+		"getCursorPos", &Cle::UserInputService::getCursorPos,
+		"isMouseButtonDown", &Cle::UserInputService::IsMouseButtonDown
 	);
 
 	lua["UserInputService"] = Cle::UserInputService{ this->registry };
@@ -56,7 +94,19 @@ void Cle::ScriptHandler::openLibraries()
 			return a - b;
 		}
 	);
+	lua.new_usertype<glm::vec2>("Vector2",
+		sol::constructors<glm::vec2(), glm::vec2(float, float)>(),
+		"x", &glm::vec2::x,
+		"y", &glm::vec2::y,
 
+		"Magnitude", sol::property(&glm::vec2::length),
+		sol::meta_function::addition, [](const glm::vec2& a, const glm::vec2& b) {
+			return a + b;
+		},
+		sol::meta_function::subtraction, [](const glm::vec2& a, const glm::vec2& b) {
+			return a - b;
+		}
+	);
 
 	lua.new_usertype<glm::vec3>("Vector3",
 		sol::constructors<glm::vec3(), glm::vec3(float, float, float)>(),
@@ -73,7 +123,8 @@ void Cle::ScriptHandler::openLibraries()
 	);
 	lua.new_usertype<Cle::Gfx::Camera>("CameraType",
 		"Position", &Cle::Gfx::Camera::Position,
-		"Orientation", sol::property(&Cle::Gfx::Camera::getForward)
+		"Forward", sol::property(&Cle::Gfx::Camera::getForward),
+		"LookAt", &Cle::Gfx::Camera::lookAt
 	);
 
 	lua.new_usertype<LuaEntity>(
@@ -82,6 +133,95 @@ void Cle::ScriptHandler::openLibraries()
 		[this](LuaEntity& entity) {
 			if (this->registry->valid(entity.entity))
 				scriptPendingDestroy.push_back(entity.entity);
+		},
+		"AddComponent",
+		[this](LuaEntity& entity, const std::string& cname) -> sol::object {
+			if (entity.entity == entt::null || !this->registry->valid(entity.entity))
+				 	return sol::make_object(
+					lua,
+					sol::nil
+				);
+
+			for (const auto& component : registeredComponents)
+			{
+				if (component.name != cname) continue;
+
+				if (component.emplace)
+					component.emplace(*this->registry, entity.entity);   
+
+				return sol::make_object(lua, LuaComponent{ entity.entity, component.id, registry });
+			}
+			return sol::make_object(lua, sol::nil);
+
+		},
+		"GetComponent",
+		[this](LuaEntity& entity, const std::string& cname) -> sol::object {
+
+			if (entity.entity == entt::null || !this->registry->valid(entity.entity))
+				return sol::make_object(lua,sol::nil);
+			if (cname == "Event")
+			{
+				auto* events = registry->try_get<EventHolder>(entity.entity);
+
+				if (!events)
+				{
+					events = &registry->emplace<EventHolder>(
+						entity.entity,
+						entity.entity,
+						registry
+					);
+				}
+
+				return sol::make_object(lua, std::ref(*events));
+			}
+			for (const auto& component : registeredComponents)
+			{
+				if (component.name != cname)
+					continue;
+
+				auto* storage = this->registry->storage(component.id);
+
+				if (!storage)
+
+					return sol::make_object(
+						lua,
+						sol::nil
+					);
+
+				return sol::make_object(
+					lua,
+					LuaComponent{
+						entity.entity,
+						component.id,
+						registry
+					}
+				);
+
+			}
+			return sol::make_object(
+				lua,
+				sol::nil
+			);
+		},
+		"RemoveComponent",
+		[this](LuaEntity & entity, const std::string& cname){
+			if (entity.entity == entt::null || !this->registry->valid(entity.entity))
+				return false;
+		
+			for (const auto& component : registeredComponents)
+			{
+				if (component.name != cname)
+					continue;
+
+				auto* storage = this->registry->storage(component.id);
+
+				if (!storage)
+					return false;
+
+				return storage->remove(entity.entity);
+			}
+
+			return false;
 		},
 		"Clone",
 		[this](LuaEntity& entity) {
@@ -130,9 +270,11 @@ void Cle::ScriptHandler::openLibraries()
 			{
 				return sol::make_object(lua, sol::nil);
 			}
+			auto child = findFirstChild(key, this->registry, this->lua);
+			if (child != sol::nil)
+				return child;
 			for (const auto& component : registeredComponents)
 			{
-
 
 				if (component.name != key)
 					continue;
@@ -166,12 +308,14 @@ void Cle::ScriptHandler::openLibraries()
 					}
 				);
 			}
-			auto child = findFirstChild(key, this->registry, this->lua);
-			if (child != sol::nil)
-				return child;
+	
+			return sol::make_object(lua, sol::nil);
+
+
+/*
 
 			auto& holder = registry->get_or_emplace<Cle::EventHolder>(entity.entity, entity.entity, registry);
-			return sol::make_object(lua, std::ref(holder.getOrMakeEvent(key)));
+			return sol::make_object(lua, std::ref(holder.getOrMakeEvent(key)));*/
 		},
 		sol::meta_function::new_index,
 
@@ -247,13 +391,15 @@ void Cle::ScriptHandler::openLibraries()
 			);
 		}
 	);
+	lua["LocalPlayer"] = lua.create_table();
 	if (registry->ctx().contains<Cle::Gfx::Camera>()) {
-		lua["Camera"] = &registry->ctx().get<Cle::Gfx::Camera>();
+		lua["LocalPlayer"]["Camera"] = &registry->ctx().get<Cle::Gfx::Camera>();
 	}
 	else {
 		lua["Camera"] = sol::nil;
 	}
 	lua["Instance"] = lua.create_table();
+	
 	lua["Instance"]["new"] = [this](const std::string& className, sol::optional<LuaEntity> parent, sol::optional<std::string> name) {
 		entt::entity e = entt::null;
 		if (className == "Part")
@@ -269,6 +415,11 @@ void Cle::ScriptHandler::openLibraries()
 		if (parent && this->registry->valid(parent->entity))
 		{
 			tree.setParent(e, parent->entity, this->registry);
+		}
+		else
+		{
+			tree.setParent(e, world->Scene, this->registry);
+
 		}
 		if (name)
 		{
@@ -288,6 +439,8 @@ void Cle::ScriptHandler::openLibraries()
 void Cle::ScriptHandler::run(double currentTime, double dt)
 
 {
+	if (Cle::gameIO::getInstance().loading) return;
+//	std::cout << "used memory " << lua.memory_used() << std::endl;
 
 	std::vector<entt::entity> entities;
 	entities.reserve(registry->storage<Script>().size());
@@ -302,15 +455,15 @@ void Cle::ScriptHandler::run(double currentTime, double dt)
 		auto& script = registry->get<Script>(e);
 		if (script.ran) continue;
 		if (!script.enabled) continue;
-
 		try
 		{
 			if (!script.started)
 			{
+
 				script.thread  = sol::thread::create(lua.lua_state());
 				sol::state_view state = script.thread.state();
 				state["script"] = LuaEntity(e, registry);
-
+				
 				sol::load_result result = state.load_file(script.path);
 				if (!result.valid())
 				{

@@ -32,7 +32,7 @@ namespace Cle::Audio {
 		}
 		ma_sound sound;
 		bool global = false;
-		ma_engine* engine;
+		ma_engine* engine = nullptr;
 		glm::vec3 position = glm::vec3(0.0f);
 
 
@@ -60,6 +60,7 @@ namespace Cle::Audio {
 				}, &playing);
 			destroyed = false;
 		}
+		Sound() = default;
 		explicit Sound(std::string path, ma_engine* engine,bool globa) : path(path), engine(engine), global(globa) {
 			ma_sound_init_from_file(engine, path.c_str(), MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_STREAM, nullptr, nullptr, &sound);
 			ma_sound_seek_to_pcm_frame(&sound, 0);

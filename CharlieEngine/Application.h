@@ -10,7 +10,9 @@
 #include "enet/enet.h"
 #include "Network.h"
 #include "gameIO.h"
-
+#ifdef far
+#undef far
+#endif
 namespace Cle::Core
 {
 	class Application

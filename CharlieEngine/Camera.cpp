@@ -14,23 +14,25 @@ Cle::Gfx::Camera::Camera(float fov, float aspect)
 	Projection = glm::perspective(fov, aspect, near, far);
 }
 
-void Cle::Gfx::Camera::lookAt(glm::vec3 target)
+void Cle::Gfx::Camera::lookAt(const glm::vec3 target)
 {
-	glm::vec3 direction = glm::normalize(target - Position);
-	View = glm::lookAt(
-		glm::vec3(0.0f),
-		direction,
-		glm::vec3(0, 1, 0)
-	);
+	glm::vec3 delta = target - Position;
+	if (glm::length(delta) < 1e-6f) return;  
+
+	glm::vec3 direction = glm::normalize(delta);
+
+	yaw = glm::atan(direction.z, direction.x);
+	pitch = glm::asin(glm::clamp(direction.y, -1.0f, 1.0f));
 }
 
 glm::mat4 Cle::Gfx::Camera::getProjection() const
 {
 	return glm::perspective(fov, aspect, near, far);
 }
+
 glm::mat4 Cle::Gfx::Camera::getViewMatrix() const
 {
-	return glm::lookAt(glm::vec3(0,0,0), getForward(), {0,1,0});
+	return glm::lookAt(glm::vec3(0, 0, 0), getForward(), { 0,1,0 }); 
 }
 glm::vec3 Cle::Gfx::Camera::getForward() const
 {

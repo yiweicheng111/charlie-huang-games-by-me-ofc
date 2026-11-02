@@ -2,6 +2,12 @@
 #include <string>
 namespace Cle::Gfx
 {
+	struct TextureComponent
+	{
+		std::string path{};
+		TextureComponent() = default;
+		TextureComponent(const std::string& p) : path(p) {}
+	};
 	class ITexture
 	{
 	protected:

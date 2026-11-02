@@ -21,6 +21,7 @@ namespace Cle
 			return instance;
 		}
 		Cle::World* world;
+		void addEntitesFromPacket(std::vector<EntityPacket>& packets);
 		static void setVariables(entt::registry* registry, Cle::World* world,bool server= false, int port = 0)
 		{
 			getInstance().registry = registry;
@@ -43,6 +44,8 @@ namespace Cle
 		ENetAddress address;
 		entt::registry* registry = nullptr;
 		std::function<void()> onSceneLoaded;
+		std::function<void(entt::entity)> onEntityAdded;
+
 		std::unordered_map< unsigned int,entt::entity> netIDtoEntity;
 		~Network()
 		{

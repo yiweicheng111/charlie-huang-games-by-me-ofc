@@ -18,13 +18,16 @@ namespace Cle
 		bool running = true;
 		std::unordered_set<entt::entity> dirtyTransforms;
 		std::unordered_set<entt::entity> dirtyMeshes;
-
+		std::vector<entt::entity> pendingCreates;
+		std::vector<int> pendingDestroys;
 		Cle::World world;
-	
+		EntityPacket buildEntityPacket(entt::entity entity);
 		Server(int port);
 		void updateTransform(entt::registry& registry,entt::entity entity);
-		void updateMesh(entt::registry& registry, entt::entity entity);
 		void sendDirtyTransforms();
+		void sendCreatedNewEntity();
+		void sendDestroyedEntity();
+
 		void listenToClient();
 		template <typename data>
 		void sendGlobalData(int dataType, data Data)

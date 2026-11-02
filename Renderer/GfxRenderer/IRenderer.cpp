@@ -94,9 +94,26 @@ bool Cle::Renderer::IRenderer::isWithinFarPlane(entt::entity entity, Cle::Gfx::C
 	auto& b = m_registry->get<Cle::Components::Bounds>(entity);
 	return glm::length2(camera.Position - t.getPosition())   < (camera.far+b.sphere.radius )* (camera.far + b.sphere.radius);
 }
+void Cle::Renderer::IRenderer::collectGarbage()
+{
+	std::unordered_set<const MeshGeometry*> alive;
+	for (auto [e, m] : m_registry->view<GenericMesh>().each())
+		alive.insert(m.geometry.get());
+
+	for (auto it = gpuMeshCache.begin(); it != gpuMeshCache.end();)
+		it = alive.contains(it->first.get()) ? std::next(it) : gpuMeshCache.erase(it);
+
+	AssetHandler::getInstance().collect(alive);
+	gcPending = false;
+	std::cout << gpuMeshCache.size() << "gpu cache size\n";
+	std::cout << AssetHandler::getInstance().meshCache.size() << "mesh cache size\n";
+	std::cout << AssetHandler::getInstance().modelCache.size() << "model cache size\n";
+
+}
 void Cle::Renderer::IRenderer::onDeleteFunction(entt::registry& r, entt::entity e)
 {
-	
+	gcPending = true;
+
 	//	std::cout << "called " << gpuMeshCache.size() << std::endl;
 }
 void Cle::Renderer::IRenderer::uploadMesh(entt::entity e, Cle::GenericMesh mesh, entt::registry& registry)
@@ -134,4 +151,25 @@ void Cle::Renderer::IRenderer::onSceneLoaded()
 
 
 		});
+}
+void Cle::Renderer::IRenderer::onEntityAddedFromServer(entt::entity entity)
+{
+
+		//material.m_Shader = getDefaultShader();
+	Cle::Gfx::Camera cam;
+
+		auto& mesh = m_registry->get<GenericMesh>(entity);
+		//std::cout << "path " << mesh.getModelPath() << std::endl;
+		const auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(mesh.getModelPath());
+
+		uploadMesh(entity, ModelLoaded.at(mesh.getMeshIndex()), *m_registry);
+
+		auto& nMesh = m_registry->get<GenericMesh>(entity);
+
+		//if (nmesh.gmesh.texture) nmesh.gmesh.texture = clientAssetHandler.getOrMakeTexture(nmesh.gmesh.texture->getPath());
+	//	if (material.getColorMap()) material.setColorMap(getOrMakeTexture(material.getColorMap()->getPath()));
+		drawMesh(entity, *m_registry, cam);
+
+
+	
 }

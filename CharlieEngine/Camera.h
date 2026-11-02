@@ -26,7 +26,7 @@ namespace Cle::Gfx
 		float height = 1;
 		Camera() : fov(glm::radians(70.0f)), aspect(1) {}
 		Camera(float fov, float aspect);
-		void lookAt(glm::vec3 target);
+		void lookAt(const glm::vec3 target);
 		glm::mat4 getViewMatrix() const;
 		glm::mat4 getProjection() const;
 		glm::vec3 getForward() const;

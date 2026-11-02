@@ -35,10 +35,56 @@ void Cle::Network::connectServer(int port, std::string ip)
         std::cout << "connection timed out\n";
     }
 }
+void Cle::Network::addEntitesFromPacket(std::vector<EntityPacket>& packets)
+{
+    using namespace Cle::Components;
+    std::vector<entt::entity> made;
 
+    for (auto& p : packets)
+    {
+        if (netIDtoEntity.contains(p.netID.value)) continue;   
+
+        entt::entity e = registry->create();
+        registry->emplace<networkID>(e, p.netID);
+        netIDtoEntity[p.netID.value] = e;
+        made.push_back(e);
+        if (p.script)
+            registry->emplace_or_replace<Script>(e, Script(*p.script));
+        if (p.systemType != SystemType::None)
+            registry->emplace_or_replace<SystemType>(e, SystemType{ p.systemType });
+        if (p.transform)
+            registry->emplace<Transform>(e, *p.transform);
+        if (p.name)
+            registry->emplace_or_replace<Name>(e, *p.name);
+        if (p.color)
+            registry->emplace<Color>(e, *p.color);
+        if (p.mesh)
+        {
+           // std::cout << "has mesh\n";
+            registry->get_or_emplace<MaterialRef>(e);
+            auto& m =registry->emplace<GenericMesh>(e, GenericMesh(p.mesh->path, p.mesh->meshIndex));
+            m.uploaded = false;
+            if (onEntityAdded) onEntityAdded(e);
+
+        }
+        if (p.treeinfo)
+        {
+            registry->get_or_emplace<TreeInfo>(e).loadingParentID = p.treeinfo->parentNetID;
+        }
+    }
+
+    for (auto e : made)
+    {
+        auto* tree = registry->try_get<TreeInfo>(e);
+        if (!tree || tree->loadingParentID == -1) continue;
+        auto it = netIDtoEntity.find(tree->loadingParentID);
+        if (it == netIDtoEntity.end() || !registry->valid(it->second)) continue;
+        tree->setParent(e, it->second, registry);
+    }
+}
 void Cle::Network::poll()
 {
-
+    std::vector<std::pair<int, int>> parentingQueue;
     ENetEvent event;
     while (enet_host_service(host, &event, 0) > 0)
     {
@@ -83,7 +129,9 @@ void Cle::Network::poll()
                 ar(packets);
                 for (auto& p : packets)
                 {
-                    auto entity = netIDtoEntity[p.netID.value];
+                    auto it = netIDtoEntity.find(p.netID.value);
+                    if (it == netIDtoEntity.end() || !registry->valid(it->second)) continue;
+                    entt::entity entity = it->second;
 
                     if (!registry->valid(entity)) continue;
                     if (p.transform && registry->any_of<Transform>(entity))
@@ -97,7 +145,29 @@ void Cle::Network::poll()
                     }
                 }
             }
-         
+            else if (header.msg == NetworkMessage::DestroyEntity)
+            {
+                std::vector<int> destroys;
+                ar(destroys);
+                for (auto i : destroys)
+                {
+                    if (!netIDtoEntity.contains(i)) continue;
+
+                    auto it = netIDtoEntity.find(i);
+                    if (it == netIDtoEntity.end()) continue;
+                    if (registry->valid(it->second)) registry->destroy(it->second);
+                    netIDtoEntity.erase(it);
+                }
+              
+            }
+            else if (header.msg == NetworkMessage::CreateEntity)
+            {
+                std::cout << "created yes\n";
+
+                ar(packets);
+                addEntitesFromPacket(packets);
+
+            }
             else if (header.msg == NetworkMessage::OnJoin)
             {
                 ar(packets);
@@ -105,73 +175,18 @@ void Cle::Network::poll()
 
                 registry->clear();
                 netIDtoEntity.clear();
+                addEntitesFromPacket(packets);              
 
               
-                int count = 0;
-                for (auto& p : packets)
-                {
-                    count++;
-                    entt::entity e = registry->create();
-
-                    registry->emplace<networkID>(e, p.netID);
-                    netIDtoEntity[p.netID.value] = e;
-                    if (p.script)
-                    {
-                        registry->emplace_or_replace<Cle::Script>(e, Script(*p.script));
-
-                    }
-                    if (p.systemType != SystemType::None)
-                    {
-                        registry->emplace_or_replace<SystemType>(e, SystemType{ p.systemType });
-                        if (p.systemType == SystemType::Scene) std::cout << "scene found\n";
-                    }
-                    if (p.transform)
-                        registry->emplace<Transform>(e, *p.transform);
-                    if (p.name)
-                    {
-
-                        registry->emplace_or_replace<Name>(e, *p.name);
-                    }
-
-                    if (p.color)
-                        registry->emplace<Color>(e, *p.color);
-                    if (p.treeinfo)
-                    {
-                        auto& tree = registry->get_or_emplace<TreeInfo>(e);
-                        tree.loadingParentID = p.treeinfo->parentNetID;
-                    }
-
-
-                    if (p.mesh)
-                    {
-                        auto mesh = GenericMesh(
-                            p.mesh->path,
-                            p.mesh->meshIndex
-                        );
-
-                        registry->emplace<GenericMesh>(e, mesh);
-
-                    }
-              
-                }
-                for (auto ent : registry->view<TreeInfo>())
-                {
-                    auto& tree = registry->get<TreeInfo>(ent);
-                    if (tree.loadingParentID == -1) continue;
-                    auto& parent = netIDtoEntity[tree.loadingParentID];
-                    if (registry->any_of<Name>(parent))
-                    {
-                     //   std::cout << "name " << registry->get<Name>(parent).getName() << std::endl;
-                    }
-                    tree.setParent(ent, parent, registry);
-                }
+            
+             
 
                 if (onSceneLoaded) onSceneLoaded();
-             
+                ScriptHandler::getInstance().setVariables(world, registry);
+
                 std::cout << "after " << registry->storage<entt::entity>().size() << std::endl;
 
             }
-            ScriptHandler::getInstance().setVariables(world, registry);
             enet_packet_destroy(event.packet);
          
             break;

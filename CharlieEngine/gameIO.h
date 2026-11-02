@@ -28,7 +28,7 @@ namespace Cle
 		void setRegistry(entt::registry* registry) {
 			this->registry = registry;
 		}
-
+		bool loading = false;
 		void Snapshot(std::string file);
 		void LoadFile(std::string file);
 	};

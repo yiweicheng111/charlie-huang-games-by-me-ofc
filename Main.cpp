@@ -24,7 +24,7 @@ int main() {
 	Cle::Editor::EditorApplication app;
 	//Cle::RunnableApplication app;
 	app.m_network->connectServer(8080,"127.0.0.1");
-
+	app.m_camera->far = 100000.0f;
 
 	//std::filesystem::current_path("C:/Users/yiwei/Desktop/Charlie");
 	//std::filesystem::current_path("../");sa
@@ -38,7 +38,7 @@ int main() {
 	app.registry.get<Cle::Components::TreeInfo>(scripttest).setParent(scripttest,app.World->Client,&app.registry);
 	app.registry.get<Cle::Components::Name>(scripttest).setName("script");
 	app.registry.emplace<std::unique_ptr< Cle::Audio::Sound>>(scripttest, std::make_unique<Cle::Audio::Sound>("beatit.mp3",&app.audio_engine,true));
-	app.registry.get<std::unique_ptr<Cle::Audio::Sound>>(scripttest)->Play();
+	//app.registry.get<std::unique_ptr<Cle::Audio::Sound>>(scripttest)->Play();
 
 	std::cout << app.registry.get<Cle::Script>(scripttest).path << std::endl;
 
@@ -46,9 +46,16 @@ int main() {
 	app.registry.emplace<Cle::Script>(s2, "Scripts/server.lua");
 	app.registry.get<Cle::Components::TreeInfo>(s2).setParent(s2, app.World->Server, &app.registry);
 	app.registry.get<Cle::Components::Name>(s2).setName("serverscript");
-	//app.World->addModelToScene("map/f.gltf");
+	auto ents = app.World->addModelToScene("map/g.gltf");
 //	auto tex = Cle::Gfx::OPENGL43::Texture("chair.png");
 
+	/*static auto tex = app.renderer->getOrMakeTexture("c.jpg");
+	for (auto e : ents)
+	{
+		app.registry.emplace<Cle::Components::CubeMapTexture>(e, CubeMapTexture({ tex,tex,tex,tex,tex,tex }));
+
+	}
+	*/
 
 //	std::cout << app.registry.storage<entt::entity>().size();
 

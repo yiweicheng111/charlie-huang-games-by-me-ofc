@@ -17,9 +17,14 @@ namespace Cle
         Cle::Components::Sphere m_local_Bounding_Sphere;
         bool gpuUploaded = false;
         int instancedIndex = 0;
+       
         MeshGeometry()
         {
           //  std::cout << "MeshGeometry constructed at " << this << "\n";
+        }
+        ~MeshGeometry()
+        {
+          //  std::cout << "deleted geo\n";
         }
     };
     class GenericMesh {

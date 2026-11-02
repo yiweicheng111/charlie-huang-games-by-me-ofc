@@ -8,6 +8,7 @@
 #include "Scripting/Event.h"
 #include "Camera.h"
 using namespace Cle::Components;
+static std::vector<std::pair<entt::entity, entt::entity>> pendingReparent;
 
 namespace Cle::Editor
 {
@@ -34,6 +35,29 @@ namespace Cle::Editor
 		}
 	
 	}
+	bool EditorUI::IsDescendant(entt::entity node, entt::entity ancestor)
+	{
+		while (node != entt::null && m_registry->valid(node))
+		{
+			if (node == ancestor) return true;
+			auto* t = m_registry->try_get<TreeInfo>(node);
+			node = t ? t->getParent() : entt::null;
+		}
+		return false;
+	}
+
+	void EditorUI::ApplyReparents()
+	{
+		for (auto [child, parent] : pendingReparent)
+		{
+			if (!m_registry->valid(child) || !m_registry->valid(parent)) continue;
+			if (!m_registry->any_of<TreeInfo>(child) || !m_registry->any_of<TreeInfo>(parent)) continue;
+			if (child == parent) continue;
+			if (IsDescendant(parent, child)) continue;   
+			m_registry->get<TreeInfo>(child).setParent(child, parent, m_registry);
+		}
+		pendingReparent.clear();
+	}
 	void EditorUI::DrawChildren(entt::entity parent)
 	{
 		if (!m_registry->any_of<TreeInfo>(parent)) return;
@@ -50,7 +74,9 @@ namespace Cle::Editor
 
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 10.0f));
 
+
 			bool open = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Framed);
+			DragForParenting(child);
 			DrawContextMenu(child);
 
 			if (open && ImGui::IsItemToggledOpen())
@@ -77,7 +103,7 @@ namespace Cle::Editor
 		ImGui::Begin("Explorer");
 		explorerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 	
-	
+
 	
 		if (ImGui::TreeNodeEx("World", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -90,6 +116,7 @@ namespace Cle::Editor
 				if (m_Focused_Entity == e) ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7, 0.7, 1.0, 1.0));
 				else ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
 				bool open = ImGui::TreeNodeEx(m_registry->get<Cle::Components::Name>(e).getName().c_str(), ImGuiTreeNodeFlags_Framed);
+				DragForParenting(e);
 
 				DrawContextMenu(e);
 				if (open && ImGui::IsItemToggledOpen())
@@ -101,6 +128,9 @@ namespace Cle::Editor
 					DrawChildren(e);
 					ImGui::TreePop();
 				}
+			
+
+			
 
 				ImGui::PopStyleColor();
 
@@ -108,8 +138,37 @@ namespace Cle::Editor
 			}
 			ImGui::TreePop();
 		}
+		ImGui::Dummy(ImGui::GetContentRegionAvail());
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload("ENTITY"))
+				pendingReparent.push_back({ *(entt::entity*)p->Data, World->Scene });
+			ImGui::EndDragDropTarget();
+		}
 		ImGui::End();
 
+		ApplyReparents();   
+	}
+
+	void EditorUI::DragForParenting(entt::entity e)
+	{
+
+	
+		if ((m_registry->any_of<SystemType>(e) && m_registry->get<SystemType>(e).type == SystemType::None) && ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("ENTITY", &e, sizeof(e));
+			ImGui::TextUnformatted(m_registry->get<Name>(e).getName().c_str());
+			ImGui::EndDragDropSource();
+		}
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload("ENTITY"))
+			{
+				entt::entity dragged = *(entt::entity*)p->Data;
+				pendingReparent.push_back({ dragged, e });
+			}
+			ImGui::EndDragDropTarget();
+		}
 	}
 	void EditorUI::DrawProperties()
 	{
@@ -244,137 +303,7 @@ namespace Cle::Editor
 					ImGui::TreePop();	
 				}
 		}
-		/*if (name)
-		{
-			if (ImGui::TreeNodeEx("Name", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				std::string newname = name->getName();
-				ImGui::InputText("Name", &newname);
-				name->setName(newname);
-
-				ImGui::TreePop();
-			}
-		}
-		if (soundptr)
-		{
-			if (ImGui::TreeNodeEx("Sound", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				std::string soundPath = soundptr->getPath();
-				float timePosition = soundptr->getTimePosition();
-				bool playing = soundptr->isPlaying();
-				ImGui::DragFloat("Volume", &soundptr->volume);
-				if (ImGui::InputText("Path", &soundPath) && glfwGetKey(m_window, GLFW_KEY_ENTER))
-				{
-					soundptr->setPath(soundPath);
-				}
-				if (ImGui::DragFloat("Time position", &timePosition) && glfwGetKey(m_window, GLFW_KEY_ENTER))
-				{
-					soundptr->setTimePosition(timePosition);
-				}
-				if (ImGui::Checkbox("Playing", &playing))
-				{
-					if (!playing) soundptr->Pause();
-					else soundptr->Play();
-				}
-				if (ImGui::Checkbox("Global", &soundptr->global))
-				{
-				}
-				ImGui::TreePop();
-
-			}
-		}
-		if (transform)
-		{
-			if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				auto pos = transform->getPosition();
-				auto orien = glm::eulerAngles(transform->getOrientation());
-				auto scale = transform->getScale();
-				if (ImGui::DragFloat3("Position", (float*)&pos))
-				{
-					transform->setPosition(pos);
-
-				}
-				if (ImGui::DragFloat3("Orientation", (float*)&orien))
-				{
-					transform->setOrientation(glm::quat(orien));
-
-				}
-				if (ImGui::DragFloat3("Scale", (float*)&scale))
-				{
-					transform->setScale(scale);
-
-				}
-
-				ImGui::TreePop();
-
-			}
-		}
-		if (lightComponent)
-		{
-			glm::vec3 Color = lightComponent->getColor();
-			float radius = lightComponent->getRadius();
-			if (ImGui::TreeNodeEx("Light", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				if (ImGui::ColorEdit3("Color", (float*)&Color))
-				{
-					lightComponent->setColor(Color);
-				}
-
-				if (ImGui::InputFloat("Radius", &radius))
-				{
-					lightComponent->setRadius(radius);
-				}
-
-
-				ImGui::TreePop();
-			}
-		}
-		if (color)
-		{
-			if (ImGui::TreeNodeEx("Color", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-
-				glm::vec3 Color = color->value;
-				if (ImGui::ColorEdit3("Color", (float*)&Color))
-				{
-					color->value = glm::vec4(Color, 1);
-				}
-				ImGui::TreePop();
-
-			}
-		}
-
-		if (mesh)
-		{
-			if (ImGui::TreeNodeEx("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				std::string texturePath;
-				std::string modelPath;
-				auto gmesh = m_registry->get<
-				>(m_Focused_Entity);
-				//	texturePath = 
-				
-				
-				
-				
-				texture ? gmesh.texture->getPath()  : "null";
-				std::string path = gmesh.getModelPath();
-				int mindex = gmesh.getMeshIndex();
-				if (ImGui::InputText("Model path", &path) && glfwGetKey(m_window, GLFW_KEY_ENTER))
-				{
-					renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, gmesh.getMeshIndex()), *m_registry);
-				}
-				if (ImGui::DragInt("Model mesh index", &mindex) && glfwGetKey(m_window, GLFW_KEY_ENTER))
-				{
-					renderer.uploadMesh(m_Focused_Entity, std::make_shared<Cle::GenericMesh>(path, mindex), *m_registry);
-
-				}
-
-				ImGui::TreePop();
-
-			}
-		}*/
+	
 		
 		ImGui::End();
 	}

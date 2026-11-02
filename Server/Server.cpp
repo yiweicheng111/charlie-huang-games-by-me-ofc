@@ -11,29 +11,106 @@
 using namespace Cle;
 static double accumulator = 0.0;
 static double dt = 1.0 / 60.0;
+static bool physicsSync = false;
+
 Cle::Server::Server(int port) : world(&registry)
 {
 	std::cout << port << std::endl;
 	Cle::gameIO::getInstance().setRegistry(&registry);
 
 	registry.on_update<Cle::Components::Transform>().connect<&Cle::Server::updateTransform>(*this);
-	registry.on_update<std::shared_ptr<Cle::GenericMesh>>().connect<&Cle::Server::updateMesh>(*this);
+	registry.on_destroy<entt::entity>().connect < +[](Server& self, entt::registry& registry, entt::entity entity) {
+		if (registry.any_of<TreeInfo>(entity))
+		{
+			if (self.world.getVisibility(entity) != Cle::Components::SystemType::Server)
+			{
+				self.pendingDestroys.push_back((int)entity);
+			}
+		}
+		} > (*this);
+	registry.on_construct<entt::entity>().connect < +[](Server& self, entt::registry& registry, entt::entity entity) {
+		self.pendingCreates.push_back(entity);
+		} > (*this);
+
 	Cle::Network::setVariables(&registry, &world, true, port);
 
 
 	Cle::ScriptHandler::getInstance().openLibraries();
 	Cle::gameIO::getInstance().onLoaded = [this]() {
+		this->world.onSceneLoaded();
 		Cle::ScriptHandler::getInstance().setVariables(&this->world, &this->registry);
 		};
 }
 void Cle::Server::updateTransform(entt::registry& registry, entt::entity entity)
 {
-	registry.get<Transform>(entity).computeMatrix();
+	auto& t = registry.get<Transform>(entity);
+	t.computeMatrix();
 	dirtyTransforms.insert(entity);
+
+	if (!physicsSync)
+	{
+		if (auto* phy = registry.try_get<Components::PhysicsComponent>(entity))
+		{
+			auto p = t.getPosition();
+			auto q = t.getOrientation();
+			phy->body->setTransform(rp3d::Transform(
+				rp3d::Vector3(p.x, p.y, p.z),
+				rp3d::Quaternion(q.x, q.y, q.z, q.w)));
+			phy->body->setLinearVelocity(rp3d::Vector3(0, 0, 0));
+		}
+	}
+		
 }
-void Cle::Server::updateMesh(entt::registry& registry, entt::entity entity)
+EntityPacket Cle::Server::buildEntityPacket(entt::entity ent)
 {
-	dirtyMeshes.insert(entity);
+	EntityPacket p;
+	if (!registry.any_of<networkID>(ent))
+		registry.emplace<networkID>(ent, (int)ent);
+	p.netID = registry.get<networkID>(ent);
+
+	if (auto* t = registry.try_get<Components::Transform>(ent)) p.transform = *t;
+	if (auto* n = registry.try_get<Components::Name>(ent))      p.name = *n;
+	if (auto* c = registry.try_get<Components::Color>(ent))     p.color = *c;
+	if (auto* g = registry.try_get<GenericMesh>(ent))
+		p.mesh = MeshPacket({ g->getModelPath(), g->getMeshIndex() });
+	if (auto* s = registry.try_get<Script>(ent))                p.script = s->path;
+	if (auto* st = registry.try_get<Components::SystemType>(ent)) p.systemType = st->type;
+
+	if (auto* tree = registry.try_get<Components::TreeInfo>(ent)) {
+		auto parent = tree->getParent();
+		if (parent != entt::null && registry.valid(parent)) {
+			if (!registry.any_of<networkID>(parent))
+				registry.emplace<networkID>(parent, (int)parent);
+			p.treeinfo = TreeInfoPacket(registry.get<networkID>(parent).value);
+		}
+		else {
+			p.treeinfo = TreeInfoPacket(-1);
+		}
+	}
+	return p;
+}
+
+void Cle::Server::sendCreatedNewEntity()
+{
+	std::vector<EntityPacket> packets;
+	for (auto e : pendingCreates)
+	{
+		if (!registry.valid(e)) continue;              
+		if (world.getVisibility(e) == SystemType::Server) continue;
+		packets.push_back(buildEntityPacket(e));
+		if (!registry.valid(e)) { std::cout << "destroyed " << (int)e << "\n"; continue; }
+	
+	}
+	pendingCreates.clear();
+	if (!packets.empty())
+		Network::getInstance().broadCast(Header{ NetworkMessage::CreateEntity }, packets);
+}
+
+void Cle::Server::sendDestroyedEntity()
+{
+	if (pendingDestroys.empty()) return;
+	Network::getInstance().broadCast(Header{ NetworkMessage::DestroyEntity }, pendingDestroys);
+	pendingDestroys.clear();
 }
 void Cle::Server::sendDirtyTransforms()
 {
@@ -62,10 +139,34 @@ void Cle::Server::stepPhysics()
 	{
 		auto& phy = registry.get<Cle::Components::PhysicsComponent>(e);
 		auto& transform = registry.get<Cle::Components::Transform>(e);
-		if (transform.physicsDirty) phy.body->updateLocalInertiaTensorFromColliders();
+		if (transform.physicsDirty)
+		{
+			auto* body = phy.body;
+
+			while (body->getNbColliders() > 0)
+			{
+				auto* collider = body->getCollider(0);
+				auto* oldShape = collider->getCollisionShape(); 
+				body->removeCollider(collider);
+
+				if (oldShape->getName() == rp3d::CollisionShapeName::BOX)
+					world.physicsCommon.destroyBoxShape(static_cast<rp3d::BoxShape*>(oldShape));
+			}
+
+			auto s = transform.getScale();
+			rp3d::Vector3 half(s.x * 0.5f, s.y * 0.5f, s.z * 0.5f);
+			auto* shape = world.physicsCommon.createBoxShape(half);
+			body->addCollider(shape, rp3d::Transform::identity());
+			body->updateMassPropertiesFromColliders();
+			body->updateLocalInertiaTensorFromColliders();
+			body->updateLocalCenterOfMassFromColliders();
+
+			transform.physicsDirty = false;
+		}
 		auto& rtransform = phy.body->getTransform();
 		auto newPos = Cle::Components::PhysicsComponent::rp3dtoglmvec3(rtransform.getPosition());
 		auto newRot = Cle::Components::PhysicsComponent::rp3dtoglmquat(rtransform.getOrientation());
+		physicsSync = true;
 
 		if (transform.getPosition() != newPos || transform.getOrientation() != newRot) {
 			registry.patch<Cle::Components::Transform>(e, [&](Cle::Components::Transform& t) {
@@ -74,6 +175,7 @@ void Cle::Server::stepPhysics()
 				//std::cout << "patched\n";
 				});
 		}
+		physicsSync = false;
 	}
 
 
@@ -133,7 +235,8 @@ void Cle::Server::run()
 				accumulator -= dt;
 			}
 			stepPhysics();
-
+			sendDestroyedEntity();
+			sendCreatedNewEntity();
 		}
 	}
 }
@@ -234,7 +337,6 @@ int main()
 	for (auto e : registry.view<Cle::Components::Name>())
 	{
 		auto& n = registry.get<Cle::Components::Name>(e);
-
 		if (registry.any_of<Cle::Script>(e))
 		{
 

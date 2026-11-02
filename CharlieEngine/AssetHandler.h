@@ -34,10 +34,10 @@ namespace Cle
 				return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
 			}
 		};
-		std::unordered_map<std::pair<std::string,int>, std::shared_ptr<MeshGeometry>,pairhash> meshCache;
+		std::unordered_map<std::pair<std::string,int>, std::weak_ptr<MeshGeometry>,pairhash> meshCache;
 		std::unordered_map<std::string, std::vector< GenericMesh>> modelCache;
 
-		bool UnloadModel(const std::string& path, int index, GenericMesh& gmeshp);
+		void collect(const std::unordered_set<const MeshGeometry*>& alive);
 		/*
 		getOrMakeMesh(const std::string& path, int meshIndex)
 		{

@@ -32,6 +32,7 @@ void Cle::OPENGL::Renderer::beginFrame()
 	//std::cout << "renderer gpu cache " << gpuMeshCache.size() << std::endl;
 	//std::cout << "unique geometry cache " << AssetHandler::getInstance().meshCache.size() << std::endl;
 
+	if(gcPending) collectGarbage();
 
 	glfwPollEvents();
 	auto& lighting = Lighting::getInstance();
@@ -70,10 +71,10 @@ std::shared_ptr<Cle::Gfx::ITexture> Cle::OPENGL::Renderer::createCubeMapTexture(
 }
 static GLuint shadowFBO, shadowMap;
 
-static float shadowWidth = 4048;
-static float shadowHeight = 4048;
-static float orthoHeight = 100.0f;
-static float orthoWidth = 100.0f;
+static float shadowWidth = 8048;
+static float shadowHeight = 8048;
+static float orthoHeight = 500.0f;
+static float orthoWidth = 500.0f;
 void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow* window)
 {
 
@@ -250,7 +251,7 @@ void Cle::OPENGL::Renderer::drawRegistry(Cle::Gfx::Camera& m_camera, GLFWwindow*
 
 	shaderCache["MeshShader"]->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 	shaderCache["MeshShader"]->setVec3("sunDirection", lightingInstance.sunDirection);
-	shaderCache["MeshShader"]->setFloat("ambientAmount", 0.3f);
+	shaderCache["MeshShader"]->setFloat("ambientAmount", lightingInstance.ambient);
 	shaderCache["MeshShader"]->setVec3("camPos", m_camera.Position);
 
 	UniformCamMatrix(m_camera, shaderCache["MeshShader"]);
@@ -515,8 +516,8 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 			gmesh.m_local_AABB.updateToWorld(gmesh.getVertices(), transform.model);
 			gmesh.m_AABB.dirty = false;
 		}*/
-	if (registry.any_of < std::shared_ptr<Cle::Gfx::ITexture>>(e)) {
-		auto& tex = registry.get < std::shared_ptr<Cle::Gfx::ITexture>>(e);
+	if (registry.any_of <TextureComponent>(e)) {
+		auto tex = getOrMakeTexture(registry.get <Cle::Gfx::TextureComponent>(e).path);
 
 		glActiveTexture(GL_TEXTURE0 + meshColorMap);
 		glBindTexture(GL_TEXTURE_2D, tex->getID());
@@ -538,15 +539,15 @@ void Cle::OPENGL::Renderer::drawMesh(entt::entity e, entt::registry& registry, C
 
 			std::string hname = "hasCubeTexture[" + std::to_string(i) + "]";
 			std::string name = "cubeTexture[" + std::to_string(i) + "]";
-
-			if (!tex.faces[i])
+			const auto& faces = tex.asVector();
+			if (faces[i].empty())
 			{
 				shader->setInt(hname, 0);
 				glBindTexture(GL_TEXTURE_2D, 0);
 				continue;
 
 			}
-			glBindTexture(GL_TEXTURE_2D, tex.faces[i]->getID());
+			glBindTexture(GL_TEXTURE_2D, getOrMakeTexture(faces[i])->getID());
 
 			shaderCache["MeshShader"]->setInt(hname, 1);
 

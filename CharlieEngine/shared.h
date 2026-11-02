@@ -52,16 +52,15 @@ namespace Cle::Components
 	{
 	private:
 		bool anchored = true;
-		glm::vec3 pendingVel;
+		glm::vec3 pendingVel = glm::vec3(0.0f);
 	public:
-		Transform* t;
-		reactphysics3d::CollisionShapeName name;
-		void setAnchored(bool v)
-		{
-			anchored = v;
-			body->setType(v ? reactphysics3d::BodyType::STATIC : reactphysics3d::BodyType::DYNAMIC);
-			body->updateLocalInertiaTensorFromColliders();
-		}
+		Transform* t = nullptr;
+		reactphysics3d::CollisionShapeName name = reactphysics3d::CollisionShapeName::BOX;
+		reactphysics3d::RigidBody* body = nullptr;
+		reactphysics3d::PhysicsCommon* physicsCommon = nullptr;
+		reactphysics3d::PhysicsWorld* physicsWorld = nullptr;
+
+		void setAnchored(bool v);
 		bool getAnchored()
 		{
 			return anchored;
@@ -109,9 +108,7 @@ namespace Cle::Components
 			auto v = body->getLinearVelocity();
 			return { v.x,v.y,v.z };
 		}
-		reactphysics3d::RigidBody* body;
-		reactphysics3d::PhysicsCommon* physicsCommon;
-		reactphysics3d::PhysicsWorld* physicsWorld;
+
 		PhysicsComponent(Transform& tr, reactphysics3d::CollisionShapeName n = reactphysics3d::CollisionShapeName::BOX
 			, bool isAnchored = true);
 			
@@ -185,6 +182,7 @@ namespace Cle::Components
 		std::vector<entt::entity> Children;
 	public:
 		unsigned int loadingParentID;
+		int64_t savedParent;
 		TreeInfo() = default;
 		const std::vector<entt::entity>& getChildren() const
 		{
@@ -198,7 +196,7 @@ namespace Cle::Components
 		void setParent(entt::entity you, entt::entity other, entt::registry* registry)
 		{
 			if (!registry->any_of<TreeInfo>(other)) {
-				std::cout << "no treeinfo on parent\n";
+				//std::cout << "no treeinfo on parent\n";
 				return;
 			}
 			auto& parenttree = registry->get<TreeInfo>(other);
@@ -358,6 +356,8 @@ namespace Cle
 		MovementKey,
 		UpdateCamera,
 		Event,
+		CreateEntity,
+		DestroyEntity,
 	};
 
 	struct Header

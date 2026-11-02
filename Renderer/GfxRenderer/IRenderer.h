@@ -29,11 +29,14 @@ namespace Cle::Renderer
 		std::unordered_map<std::string, std::shared_ptr<Cle::Gfx::ITexture>> textureCache;
 		//	std::unordered_map<Cle::Components::MaterialRef, std::shared_ptr<Cle::Gfx::Material>> materialCache;
 	public:
+		bool gcPending = false;
+		  void collectGarbage();
 		int resolutionWidth = 2000;
 		int resolutionHeight = 2000;
 		int width, height = 1;
 		void onDeleteFunction(entt::registry& r, entt::entity e);
 		std::unordered_map<std::string, std::shared_ptr<IShader>> shaderCache;
+		void onEntityAddedFromServer(entt::entity e);
 
 		virtual std::shared_ptr < Cle::Gfx::IMesh> getOrMakeMesh(Cle::GenericMesh mesh) = 0;
 		virtual std::shared_ptr<Cle::Gfx::ITexture> getOrMakeTexture(const std::string& path) = 0;

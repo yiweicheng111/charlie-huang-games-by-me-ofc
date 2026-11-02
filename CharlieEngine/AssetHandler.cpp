@@ -1,6 +1,5 @@
 #include "AssetHandler.h"
 #include "Mesh.h"
-#include "AssetHandler.h"
 #include <iostream>
 #include <filesystem>
 #include <glm/glm.hpp>
@@ -18,36 +17,18 @@ static glm::mat4 toGlm(aiMatrix4x4 mat)
 
 
 
-bool Cle::AssetHandler::UnloadModel(const std::string& path, int index, GenericMesh& gmeshp)
+
+void AssetHandler::collect(const std::unordered_set<const MeshGeometry*>& alive)
 {
-    //std::cout << path << index <<std::endl;
-
-    auto it = meshCache.find({ path, index });
-    if (it == meshCache.end())
-
+    for (auto it = modelCache.begin(); it != modelCache.end();)
     {
-        //	std::cout << " note here" << std::endl;
-
-        return false;
+        bool used = std::any_of(it->second.begin(), it->second.end(),
+            [&](const GenericMesh& g) { return alive.contains(g.geometry.get()); });
+        it = used ? std::next(it) : modelCache.erase(it);
     }
-
-    auto& meshPtr = meshCache[{path, index}];
-    //	std::cout << "ptr used " << meshPtr.use_count() << std::endl;
-    auto& vec = modelCache[path];
-/*
-    vec.erase(std::remove_if(vec.begin(), vec.end(), [&](const GenericMesh& g) {
-        return g.getModelPath() == gmeshp.getModelPath() && g.getMeshIndex() == gmeshp.getMeshIndex();
-        }), vec.end());*/
-    if (meshPtr.use_count() > 3) {
-        //std::cout << "still some instances cant delete yet\n";
-        return false;
-    }
-    meshCache.erase(it);
-    return true;
-
+    for (auto it = meshCache.begin(); it != meshCache.end();)
+        it = modelCache.contains(it->first.first) ? std::next(it) : meshCache.erase(it);
 }
-
-
 std::vector<GenericMesh> AssetHandler::ProcessNode(
     aiNode* node,
     const aiScene* scene,
@@ -139,6 +120,7 @@ std::vector<GenericMesh> AssetHandler::ProcessNode(
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS)
             {
                 gMesh.assimpRequestedDiffuse = std::string("map/") + path.C_Str();
+                std::cout << gMesh.assimpRequestedDiffuse << "diffuse\n";
             }
 
         }
@@ -403,7 +385,7 @@ AssetHandler::LoadModel(std::string path)
         mesh.setModelPath(path);
 
         mesh.setMeshIndex(instanceIndex);
-
+        
           
 
 
@@ -415,6 +397,7 @@ AssetHandler::LoadModel(std::string path)
     for (auto& [assimpMeshIndex, geometry] : tempcache)
     {
       //  std::cout << assimpMeshIndex << "index" << std::endl;
+        geometry->instancedIndex = assimpMeshIndex;
         meshCache[
         {
             path,

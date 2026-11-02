@@ -1,6 +1,14 @@
 #include "shared.h"
 #include "World.h"
 #include "Scripting/Scripting.h"
+void Cle::Components::PhysicsComponent::setAnchored(bool v)
+
+{
+	if (body == nullptr) return;
+	anchored = v;
+	body->setType(v ? reactphysics3d::BodyType::STATIC : reactphysics3d::BodyType::DYNAMIC);
+	body->updateLocalInertiaTensorFromColliders();
+}
 void Cle::Components::PhysicsComponent::onLoad(Transform& tr)
 {
 	t = &tr;
@@ -12,6 +20,7 @@ void Cle::Components::PhysicsComponent::onLoad(Transform& tr)
 
 	body = physicsWorld->createRigidBody(reactphysics3d::Transform(
 		glmtorp3dvec3(t->getPosition()), glmtorp3dquat(t->getOrientation())));
+	if (body) body->updateLocalInertiaTensorFromColliders();
 
 	if (name == reactphysics3d::CollisionShapeName::BOX)
 		body->addCollider(physicsCommon->createBoxShape(glmtorp3dvec3(t->getScale()) / 2.0f),
@@ -26,7 +35,6 @@ Cle::Components::PhysicsComponent::PhysicsComponent(Transform& tr, reactphysics3
 	: anchored(isAnchored), name(n)
 {
 	t = &tr;
-
 	Cle::World* world = Cle::ScriptHandler::getInstance().world;
 	if (!world)
 	{
@@ -41,6 +49,6 @@ Cle::Components::PhysicsComponent::PhysicsComponent(Transform& tr, reactphysics3
 		body->setType(isAnchored ? reactphysics3d::BodyType::STATIC : reactphysics3d::BodyType::DYNAMIC);
 
 	}
-	body->updateLocalInertiaTensorFromColliders();
+	if (body) body->updateLocalInertiaTensorFromColliders();
 
 }

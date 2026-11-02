@@ -31,7 +31,7 @@ namespace Cle
 		std::string name;
 		entt::entity entity;
 		entt::registry* registry;
-
+	
 
 		void Connect(sol::main_protected_function call)
 		{
@@ -70,6 +70,18 @@ namespace Cle
 		entt::registry* registry;
 		EventHolder() = delete;
 		EventHolder(entt::entity e, entt::registry* r) : entity(e),registry(r) {}
+		void removeEvent(const std::string& key)
+		{
+			for (auto it = events.begin(); it != events.end(); ++it)
+			{
+				if (it->name == key)
+				{
+					events.erase(it);
+					return;
+				}
+			}
+			
+		}
 		Event& getOrMakeEvent(std::string name)
 		{
 			for (auto& i : events)

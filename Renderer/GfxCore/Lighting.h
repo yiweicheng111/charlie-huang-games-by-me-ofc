@@ -23,8 +23,8 @@ namespace Cle
 			return instance;
 		}
 
-		float fogStart = 1e3;
-		float fogEnd = 1e4;
+		float fogStart = 10;
+		float fogEnd = 500;
 		float ambient = 0.3f;
 
 		glm::vec3 ambientColor = glm::vec3(0.9,0.5,0.5);
@@ -32,7 +32,7 @@ namespace Cle
 
 		glm::vec3 skyBottom = glm::vec3(1, 0.8, 0.8);
 		glm::vec3 skyTop = glm::vec3(0.6, 0.7, 1);
-		glm::vec3 backgroundColor = skyBottom;
+		glm::vec3 backgroundColor = skyTop;
 
 		Cle::Components::CubeMapTexture skybox;
 		std::shared_ptr<Cle::Gfx::ITexture> skyboxTex;

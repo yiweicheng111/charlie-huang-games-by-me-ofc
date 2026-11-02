@@ -21,7 +21,7 @@ Cle::World::World(entt::registry* registry) {
 	Replicated = registry->create(); registry->emplace<TreeInfo>(Replicated); registry->emplace<Name>(Replicated, "Replicated");  registry->emplace_or_replace<SystemType>(Replicated, SystemType{ SystemType::Replication });
 	//Lighting = registry->create(); registry->emplace<TreeInfo>(Replicated); registry->emplace<Name>(Lighting, "Lighting"); registry->emplace<Cle::Lighting>(Lighting,Cle::Lighting::getInstance());
 	physicsWorld = physicsCommon.createPhysicsWorld();
-	physicsWorld->setGravity(reactphysics3d::Vector3(0, -180.0f, 0));
+	physicsWorld->setGravity(reactphysics3d::Vector3(0, -100.0f, 0));
 	Cle::ScriptHandler::getInstance().setVariables(this, registry);
 
 	Cle::RegisterReflection(registry);
@@ -61,15 +61,16 @@ entt::entity Cle::World::CreateDebugObject(Cle::GenericMesh GMesh)
 	registry->emplace<Cle::Components::Transform>(charlie);
 	auto& t = registry->get<Cle::Components::Transform>(charlie);
 	//registry->emplace<Cle::Components::Name>(charlie, "charlie");
-	registry->emplace<PhysicsComponent>(charlie, t, &physicsCommon, physicsWorld);
 	registry->emplace<Cle::GenericMesh>(charlie, GMesh);
 
 	auto& m = registry->get<GenericMesh>(charlie);
 	t.setPosition(m.positionOffset);
 	t.setScale(m.scaleOffset);
 	t.setOrientation(m.orientationOffset);
+	registry->emplace_or_replace< Cle::Components::TreeInfo>(charlie);
 	registry->get < Cle::Components::TreeInfo >(charlie).setParent(charlie, Scene,registry);
-
+	auto& p =registry->emplace<PhysicsComponent>(charlie, t, &physicsCommon, physicsWorld);
+	p.body->updateLocalInertiaTensorFromColliders();
 	return charlie;
 
 }
@@ -141,7 +142,7 @@ std::vector<entt::entity> Cle::World::addModelToScene(const std::string& path)
 	auto& ModelLoaded = Cle::AssetHandler::getInstance().LoadModel(path);
 	std::vector<entt::entity> entts;
 
-	//auto tex = renderer.getOrMakeTexture("c.jpg");
+//	static auto tex = renderer.getOrMakeTexture("c.jpg");
 	for (auto& I : ModelLoaded) {
 		//std::cout << j << std::endl;
 
@@ -149,7 +150,7 @@ std::vector<entt::entity> Cle::World::addModelToScene(const std::string& path)
 		entts.push_back(e);
 		registry->get<Cle::Components::Color>(e).value = glm::vec4(I.assimpRequestedColor, 1);
 	//	registry->emplace<Cle::Components::CubeMapTexture>(e, CubeMapTexture({ tex,tex,tex,tex,tex,tex }));
-
+//
 	}
 	return entts;
 }
@@ -223,7 +224,7 @@ void Cle::World::DestroyObject(
 {
 	if (!registry.any_of<TreeInfo>(existing))
 	{
-		std::cout << "no tree info\n";
+		//std::cout << "no tree info\n";
 
 		return;
 	}
@@ -233,7 +234,7 @@ void Cle::World::DestroyObject(
 	//std::cout << children.size() << std::endl;
 	for (auto child : children)
 	{
-		std::cout << "destorying child\n";
+		//std::cout << "destorying child\n";
 		if (registry.valid(child))
 			registry.destroy(child);
 	}

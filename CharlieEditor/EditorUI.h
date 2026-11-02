@@ -32,7 +32,9 @@ namespace Cle::Editor
 		EditorUI() {};
 
 		glm::vec2 mousePosRelativeToGame;
-
+		void DragForParenting(entt::entity e);
+		bool IsDescendant(entt::entity node, entt::entity ancestor);
+		void ApplyReparents();
 		void DrawChildren(entt::entity parent);
 		void DrawExplorer();
 		void DrawProperties();

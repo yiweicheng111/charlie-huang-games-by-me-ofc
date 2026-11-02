@@ -3,12 +3,19 @@
 #include "sol/sol.hpp"
 #include <glm/glm.hpp>
 #include <iostream>
+#include "nlohmann/json.hpp"
+
 namespace Cle
 {
     struct typeInfo
     {
         entt::id_type id;
         std::string name;
+        void (*notify)(entt::registry&, entt::entity) = nullptr;
+        void (*emplace)(entt::registry&, entt::entity);
+        std::function<nlohmann::json(entt::registry&, entt::entity)> jsonSave;
+        std::function<void(entt::registry&, entt::entity, const nlohmann::json&)> jsonLoad;
+
     };
     
     struct SubProperty

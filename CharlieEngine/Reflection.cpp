@@ -1,7 +1,6 @@
 #include "Reflection.h"
 #include <glm/glm.hpp>
 #include <entt/meta/meta.hpp>
-#include "Reflection.h"
 #include <entt/meta/factory.hpp>
 #include <entt/meta/resolve.hpp>
 #include <entt/meta/template.hpp>
@@ -9,18 +8,55 @@
 #include "Audio/AudioEngine.h"
 #include "Lighting.h"
 #include "Scripting/Event.h"
+#include "nlohmann/json.hpp"
 using namespace Cle;
 
 template <typename Component>
-void registerComponent(const std::string& name)
+
+void registerComponent(const std::string& name,bool shouldPatch = true)
 {
-    registeredComponents.push_back(typeInfo({ entt::type_hash<Component>::value(), name }));
+    typeInfo t{};
+    t.id = entt::type_hash<Component>::value();
+    t.name = name;
+    t.notify = shouldPatch
+        ? +[](entt::registry& r, entt::entity e) { r.patch<Component>(e); }
+    : nullptr;
+    t.emplace = +[](entt::registry& r, entt::entity e) {
+        if (!r.all_of<Component>(e))
+        r.emplace<Component>(e);};
+
+    registeredComponents.push_back(t);
+
 }
 void registerName(const std::string& name)
 {
     propertyNames[entt::hashed_string(name.c_str()).value()] = name;
 }
+template <typename T>
+typeInfo& registerCerealComponent(const std::string& name)
+{
+    registerComponent<T>(name, false);
+    auto& t = registeredComponents.back();
 
+    t.jsonSave = [](entt::registry& r, entt::entity e) -> nlohmann::json {
+        auto* c = r.try_get<T>(e);
+        if (!c) return nullptr;
+        std::ostringstream os(std::ios::binary);
+        { cereal::BinaryOutputArchive ar(os); ar(*c); }
+        std::string s = os.str();
+        return nlohmann::json::binary(std::vector<uint8_t>(s.begin(), s.end()));
+        };
+
+    t.jsonLoad = [](entt::registry& r, entt::entity e, const nlohmann::json& j) {
+        if (!j.is_binary()) return;
+        auto& b = j.get_binary();
+        std::istringstream is(std::string(b.begin(), b.end()), std::ios::binary);
+        T value{};
+        { cereal::BinaryInputArchive ar(is); ar(value); }
+        r.emplace_or_replace<T>(e, std::move(value));
+        };
+    return t;
+}
 using namespace entt::literals;
 namespace Cle
 {
@@ -45,11 +81,39 @@ namespace Cle
             .data<&glm::vec3::x>("x"_hs)
             .data<&glm::vec3::y>("y"_hs)
             .data<&glm::vec3::z>("z"_hs);
-        registerComponent<glm::vec3>("vec3");
+        registerComponent<glm::vec3>("vec3",false);
         registerName("x");
         registerName("y");
         registerName("z");
 
+
+     
+
+        entt::meta_factory<CubeMapTexture>{}
+        .data<&CubeMapTexture::right>("right"_hs)
+            .data<&CubeMapTexture::left>("left"_hs)
+            .data<&CubeMapTexture::top>("top"_hs)
+            .data<&CubeMapTexture::bottom>("bottom"_hs)
+            .data<&CubeMapTexture::front>("front"_hs)
+            .data<&CubeMapTexture::back>("back"_hs);
+
+        registerComponent<CubeMapTexture>("Texture", false);
+
+
+
+        registerName("right");
+        registerName("left");
+        registerName("top");
+        registerName("bottom");
+        registerName("front");
+        registerName("back");
+
+
+        entt::meta_factory<TextureComponent>{}
+        .data<&TextureComponent::path>("Path"_hs);
+
+        registerComponent<TextureComponent>("Decals");
+        registerName("Path");
 
         entt::meta_factory<PhysicsComponent>{}
         .data<&PhysicsComponent::setAnchored, &PhysicsComponent::getAnchored>("Anchored"_hs);
@@ -60,6 +124,14 @@ namespace Cle
         registerName("Anchored");
 
 
+        entt::meta_factory<LightComponent>{}
+        .data<&LightComponent::setRadius, &LightComponent::getRadius>("Radius"_hs)
+        .data<&LightComponent::setColor, &LightComponent::setColor>("Color"_hs);
+        registerComponent<LightComponent>("Light");
+        registerName("Radius");
+        registerName("Color");
+
+
 
         entt::meta_factory<glm::vec4>{}
         .data<&glm::vec4::x>("x"_hs)
@@ -67,7 +139,7 @@ namespace Cle
             .data<&glm::vec4::z>("z"_hs)
             .data<&glm::vec4::w>("w"_hs)
             ;
-        registerComponent<glm::vec4>("vec4");
+        registerComponent<glm::vec4>("vec4",false);
         registerName("x");
         registerName("y");
         registerName("z");
@@ -78,7 +150,7 @@ namespace Cle
             .data<&glm::quat::x>("x"_hs)
             .data<&glm::quat::y>("y"_hs)
             .data<&glm::quat::z>("z"_hs);
-        registerComponent<glm::quat>("quat");
+        registerComponent<glm::quat>("quat",false);
         registerName("x");
         registerName("y");
         registerName("z");
@@ -122,6 +194,13 @@ namespace Cle
         registerName("Playing");
         registerName("Position");
         registerName("Global");
+
+
+        registerCerealComponent<GenericMesh>("GenericMesh");
+        registerCerealComponent<Cle::MaterialRef>("MaterialRef");
+        registerCerealComponent<Script>("Script");
+        registerCerealComponent<Cle::Components::SystemType>("SystemType");
+
         std::cout << "size " << Cle::registeredComponents.size() << std::endl;
 
     }
@@ -235,41 +314,48 @@ namespace Cle
 
         if (!data)
             return;
-
+        bool changed = false;
         if (luaValue.is<float>())
         {
             data.set(instance, luaValue.as<float>());
-            return;
+            changed = true;
         }
 
         if (luaValue.is<bool>())
         {
             data.set(instance, luaValue.as<bool>());
-            return;
+            changed = true;
         }
 
         if (luaValue.is<std::string>())
         {
             data.set(instance, luaValue.as<std::string>());
-            return;
+            changed = true;
         }
 
         if (luaValue.is<glm::vec3>())
         {
             data.set(instance, luaValue.as<glm::vec3>());
-            return;
+            changed = true;
         }
 
         if (luaValue.is<glm::vec4>())
         {
             data.set(instance, luaValue.as<glm::vec4>());
-            return;
+            changed = true;
         }
 
         if (luaValue.is<glm::quat>())
         {
             data.set(instance, luaValue.as<glm::quat>());
-            return;
+            changed = true;
         }
+        if (!changed) return;
+
+        for (auto& c : registeredComponents)
+            if (c.id == componentType) {
+                if (c.notify) c.notify(registry, entity);
+                break;
+            }
     }
 }

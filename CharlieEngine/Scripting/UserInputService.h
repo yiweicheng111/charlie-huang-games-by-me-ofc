@@ -1,5 +1,6 @@
 #include <GLFW/glfw3.h>
 #include <entt/entt.hpp>
+#include <iostream>
 namespace Cle
 {
 	struct UserInputService
@@ -22,6 +23,25 @@ namespace Cle
 			}
 			return glfwGetKey(window, keyCode) == GLFW_PRESS;
 		}
-	
+		glm::vec2 getCursorPos() const
+		{
+			if (!window)
+			{
+				std::cout << "no window\n";
+				return { 0,0 };
+			}
+			double x, y;
+			glfwGetCursorPos(window, &x, &y);
+			return glm::vec2(x, y);
+		}
+		bool IsMouseButtonDown() const
+		{
+			if (!window)
+			{
+				std::cout << "no window\n";
+				false;
+			}
+			return glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2);
+		}
 	};
 }
